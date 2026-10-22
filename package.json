@@ -16,6 +16,7 @@
     "@react-native-community/datetimepicker": "9.1.0",
     "@react-native-ml-kit/text-recognition": "^2.0.0",
     "@tanstack/react-query": "^5.90.21",
+    "@types/react": "~19.2.2",
     "babel-plugin-react-compiler": "^19.0.0-beta-e993439-20250117",
     "expo": "~57.0.7",
     "expo-constants": "~57.0.6",
@@ -30,9 +31,19 @@
     "react-native": "0.86.3",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-keyboard-controller": "1.21.9",
+    "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
-    "typescript": "~6.0.3",
-    "@types/react": "~19.2.2"
+    "react-native-worklets": "0.10.1",
+    "typescript": "~6.0.3"
+  },
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "@react-native-ml-kit/text-recognition"
+        ]
+      }
+    }
   }
 }

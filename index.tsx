@@ -1,0 +1,1123 @@
+import DateTimePicker, {
+  type DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import * as MediaLibrary from 'expo-media-library/legacy';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  Linking,
+  Platform,
+  Pressable,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useColors } from '@/hooks/useColors';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+type Match = MediaLibrary.Asset & {
+  extractedText: string;
+  wordCount: number;
+};
+
+type ScanResult = {
+  matches: Match[];
+  checked: number;
+  total: number;
+  cancelled: boolean;
+};
+
+const formatDate = (date: Date) =>
+  date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+const getDayStart = (date: Date) => {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  return result;
+};
+
+const getDayEnd = (date: Date) => {
+  const result = new Date(date);
+  result.setHours(23, 59, 59, 999);
+  return result;
+};
+
+export default function HomeScreen() {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [startDate, setStartDate] = useState(
+    () => new Date(Date.now() - 30 * DAY_MS),
+  );
+  const [endDate, setEndDate] = useState(() => new Date());
+  const [dateTarget, setDateTarget] = useState<'start' | 'end' | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [hasScanned, setHasScanned] = useState(false);
+  const [permissionLimited, setPermissionLimited] = useState(false);
+  const [progress, setProgress] = useState({ checked: 0, total: 0 });
+  const [scanWasCancelled, setScanWasCancelled] = useState(false);
+  const cancelScanRef = useRef(false);
+
+  const selectedIds = useMemo(
+    () => Object.keys(selected).filter((id) => selected[id]),
+    [selected],
+  );
+  const allSelected =
+    matches.length > 0 && matches.every((item) => selected[item.id]);
+
+  const openSettings = useCallback(() => {
+    if (Platform.OS !== 'web') {
+      void Linking.openSettings().catch(() => {
+        Alert.alert(
+          'Settings unavailable',
+          'Open your device settings and allow DocuSweep to access photos.',
+        );
+      });
+    }
+  }, []);
+
+  const chooseDate = useCallback(
+    (event: DateTimePickerEvent, date?: Date) => {
+      const target = dateTarget;
+      setDateTarget(null);
+      if (event.type === 'dismissed' || !date || !target) return;
+
+      if (target === 'start') {
+        setStartDate(date);
+        if (date > endDate) setEndDate(date);
+      } else {
+        setEndDate(date);
+        if (date < startDate) setStartDate(date);
+      }
+    },
+    [dateTarget, endDate, startDate],
+  );
+
+  const scanPhotos = useCallback(async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert(
+        'Use an Android device',
+        'Gallery scanning and on-device text recognition are available in the Android app.',
+      );
+      return;
+    }
+
+    cancelScanRef.current = false;
+    setIsScanning(true);
+    setHasScanned(false);
+    setScanWasCancelled(false);
+    setMatches([]);
+    setSelected({});
+    setProgress({ checked: 0, total: 0 });
+
+    try {
+      const permission = await MediaLibrary.requestPermissionsAsync(false, [
+        'photo',
+      ]);
+      const allowed =
+        permission.granted || permission.accessPrivileges === 'limited';
+
+      if (!allowed) {
+        if (!permission.canAskAgain) {
+          Alert.alert(
+            'Photo access is turned off',
+            'Allow photo access in Android settings to scan your gallery.',
+            [
+              { text: 'Not now', style: 'cancel' },
+              { text: 'Open settings', onPress: openSettings },
+            ],
+          );
+        } else {
+          Alert.alert(
+            'Photo access needed',
+            'Allow DocuSweep to access photos so it can look for documents and notes.',
+          );
+        }
+        return;
+      }
+
+      setPermissionLimited(permission.accessPrivileges === 'limited');
+
+      let assets: MediaLibrary.Asset[] = [];
+      let cursor: string | undefined;
+      let hasNextPage = true;
+      const from = getDayStart(startDate).getTime();
+      const to = getDayEnd(endDate).getTime();
+
+      while (hasNextPage && !cancelScanRef.current) {
+        const page = await MediaLibrary.getAssetsAsync({
+          mediaType: 'photo',
+          first: 100,
+          after: cursor,
+          createdAfter: from,
+          createdBefore: to,
+          sortBy: [[MediaLibrary.SortBy.creationTime, false]],
+        });
+        assets = [...assets, ...page.assets];
+        cursor = page.endCursor;
+        hasNextPage = page.hasNextPage;
+        setProgress({ checked: 0, total: assets.length });
+      }
+
+      if (cancelScanRef.current) {
+        setHasScanned(true);
+        setScanWasCancelled(true);
+        return;
+      }
+
+      // This package uses native Google ML Kit. Its module is loaded only when
+      // scanning starts so the screen can still render in a generic preview.
+      let recognizeText: (uri: string) => Promise<{ text?: string; blocks?: Array<{ lines?: unknown[] }> }>;
+      try {
+        const textRecognition = await import(
+          '@react-native-ml-kit/text-recognition'
+        );
+        recognizeText = (uri) => textRecognition.default.recognize(uri);
+      } catch {
+        Alert.alert(
+          'Android build required',
+          'On-device text recognition needs the DocuSweep Android build. It is not available in the standard Expo Go preview.',
+        );
+        return;
+      }
+
+      const result: ScanResult = {
+        matches: [],
+        checked: 0,
+        total: assets.length,
+        cancelled: false,
+      };
+      setProgress({ checked: 0, total: assets.length });
+
+      for (let index = 0; index < assets.length; index += 1) {
+        if (cancelScanRef.current) {
+          result.cancelled = true;
+          break;
+        }
+
+        const asset = assets[index];
+        setProgress({ checked: index, total: assets.length });
+        try {
+          const recognition = await recognizeText(asset.uri);
+          const text = (recognition.text ?? '').trim();
+          const lineCount =
+            recognition.blocks?.reduce(
+              (totalLines, block) => totalLines + (block.lines?.length ?? 0),
+              0,
+            ) ?? 0;
+          const wordCount = text.split(/\s+/).filter(Boolean).length;
+
+          // OCR is a first-pass signal, not a perfect document classifier.
+          // Every result remains reviewable before any deletion is requested.
+          if (
+            wordCount >= 8 ||
+            lineCount >= 3 ||
+            (wordCount >= 4 && asset.width > asset.height * 0.8)
+          ) {
+            result.matches.push({ ...asset, extractedText: text, wordCount });
+          }
+        } catch {
+          // Unsupported image formats and individual OCR failures are skipped.
+        }
+        result.checked = index + 1;
+        setProgress({ checked: result.checked, total: assets.length });
+      }
+
+      setMatches(result.matches);
+      setHasScanned(true);
+      setScanWasCancelled(result.cancelled);
+      if (result.cancelled) {
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Warning,
+        );
+      } else if (result.matches.length === 0) {
+        Alert.alert(
+          'Scan complete',
+          'No likely document or note photos were found in this date range.',
+        );
+      } else {
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success,
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        'Could not scan photos',
+        error instanceof Error
+          ? error.message
+          : 'Check photo access and try again.',
+      );
+    } finally {
+      setIsScanning(false);
+      setProgress({ checked: 0, total: 0 });
+    }
+  }, [endDate, openSettings, startDate]);
+
+  const cancelScan = useCallback(() => {
+    cancelScanRef.current = true;
+  }, []);
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelected((current) => ({ ...current, [id]: !current[id] }));
+    void Haptics.selectionAsync();
+  }, []);
+
+  const toggleAll = useCallback(() => {
+    if (allSelected) {
+      setSelected({});
+    } else {
+      setSelected(Object.fromEntries(matches.map((item) => [item.id, true])));
+    }
+    void Haptics.selectionAsync();
+  }, [allSelected, matches]);
+
+  const deleteSelected = useCallback(() => {
+    if (selectedIds.length === 0) return;
+    const idsToDelete = [...selectedIds];
+    Alert.alert(
+      'Delete selected photos?',
+      `${idsToDelete.length} photo${idsToDelete.length === 1 ? '' : 's'} will be sent to Android's photo deletion flow. The system may ask you to approve the request.`,
+      [
+        { text: 'Keep photos', style: 'cancel' },
+        {
+          text: 'Continue',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const confirmed = await MediaLibrary.deleteAssetsAsync(idsToDelete);
+              if (!confirmed) {
+                Alert.alert(
+                  'Nothing deleted',
+                  'Android did not confirm the deletion request.',
+                );
+                return;
+              }
+              setMatches((current) =>
+                current.filter((item) => !idsToDelete.includes(item.id)),
+              );
+              setSelected({});
+              await Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success,
+              );
+              Alert.alert(
+                'Deletion request processed',
+                'Android processed the selected photo deletion request.',
+              );
+            } catch {
+              Alert.alert(
+                'Deletion needs approval',
+                'Android may require you to approve deletion in its system photo flow. Review the system prompt to continue.',
+              );
+            }
+          },
+        },
+      ],
+    );
+  }, [selectedIds]);
+
+  const renderMatch = useCallback(
+    ({ item }: { item: Match }) => {
+      const isSelected = Boolean(selected[item.id]);
+      return (
+        <Pressable
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: isSelected }}
+          accessibilityLabel={`Photo from ${formatDate(new Date(item.creationTime * 1000))}, ${item.wordCount} detected words`}
+          onPress={() => toggleSelected(item.id)}
+          style={({ pressed }) => [
+            styles.matchCard,
+            {
+              backgroundColor: isSelected ? colors.secondary : colors.card,
+              borderColor: isSelected ? colors.primary : colors.border,
+              opacity: pressed ? 0.84 : 1,
+            },
+          ]}
+          testID={`photo-match-${item.id}`}
+        >
+          <Image
+            source={{ uri: item.uri }}
+            style={[styles.thumbnail, { backgroundColor: colors.muted }]}
+            resizeMode="cover"
+            accessibilityLabel="Photo preview"
+          />
+          <View style={styles.matchContent}>
+            <Text style={[styles.matchDate, { color: colors.foreground }]}>
+              {formatDate(new Date(item.creationTime * 1000))}
+            </Text>
+            <Text style={[styles.matchMeta, { color: colors.mutedForeground }]}>
+              {item.width} × {item.height} · {item.wordCount} detected words
+            </Text>
+            <Text
+              numberOfLines={2}
+              style={[styles.matchSnippet, { color: colors.foreground }]}
+            >
+              {item.extractedText || 'Text-like content detected'}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.checkCircle,
+              {
+                backgroundColor: isSelected ? colors.primary : 'transparent',
+                borderColor: isSelected ? colors.primary : colors.border,
+              },
+            ]}
+          >
+            {isSelected ? (
+              <Ionicons
+                name="checkmark"
+                size={15}
+                color={colors.primaryForeground}
+              />
+            ) : null}
+          </View>
+        </Pressable>
+      );
+    },
+    [colors, selected, toggleSelected],
+  );
+
+  const emptyResults = (
+    <View
+      style={[
+        styles.emptyCard,
+        { backgroundColor: colors.card, borderColor: colors.border },
+      ]}
+    >
+      <View
+        style={[
+          styles.emptyIcon,
+          { backgroundColor: colors.secondary },
+        ]}
+      >
+        <Ionicons name="documents-outline" size={24} color={colors.primary} />
+      </View>
+      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+        {scanWasCancelled ? 'Scan paused' : 'Nothing found this time'}
+      </Text>
+      <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+        {scanWasCancelled
+          ? 'Your checked photos are shown above. You can scan the date range again whenever you are ready.'
+          : 'Try a wider date range or check that DocuSweep can see the photos you want to scan.'}
+      </Text>
+    </View>
+  );
+
+  return (
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: colors.background }]}
+      edges={['top', 'left', 'right']}
+    >
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor={colors.background}
+      />
+      <FlatList
+        data={hasScanned ? matches : []}
+        keyExtractor={(item) => item.id}
+        renderItem={renderMatch}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.listContent,
+          {
+            paddingTop: Platform.OS === 'web' ? 67 : 6,
+            paddingBottom:
+              Math.max(insets.bottom, Platform.OS === 'web' ? 34 : 16) +
+              (selectedIds.length > 0 ? 88 : 28),
+          },
+        ]}
+        ListHeaderComponent={
+          <View>
+            <View style={styles.topbar}>
+              <View style={[styles.brandMark, { backgroundColor: colors.primary }]}>
+                <Ionicons
+                  name="scan-outline"
+                  size={22}
+                  color={colors.primaryForeground}
+                />
+              </View>
+              <View style={styles.brandText}>
+                <Text style={[styles.brandName, { color: colors.foreground }]}>
+                  DocuSweep
+                </Text>
+                <Text
+                  style={[styles.brandCaption, { color: colors.mutedForeground }]}
+                >
+                  Your gallery, a little tidier
+                </Text>
+              </View>
+              <View style={[styles.privateBadge, { backgroundColor: colors.secondary }]}>
+                <Ionicons name="lock-closed-outline" size={12} color={colors.primary} />
+                <Text style={[styles.privateText, { color: colors.primary }]}>
+                  On device
+                </Text>
+              </View>
+            </View>
+
+            <View
+              style={[styles.hero, { backgroundColor: colors.foreground }]}
+            >
+              <View style={styles.heroCopy}>
+                <Text style={[styles.eyebrow, { color: colors.secondary }]}>
+                  A QUIETER CAMERA ROLL
+                </Text>
+                <Text
+                  style={[
+                    styles.heroTitle,
+                    { color: colors.primaryForeground },
+                  ]}
+                >
+                  Find the pages{'\n'}you meant to keep.
+                </Text>
+                <Text style={[styles.heroBody, { color: colors.secondary }]}>
+                  Spot notebook pages, receipts, and document photos in a date
+                  range you choose. You review every match.
+                </Text>
+              </View>
+              <View style={styles.heroArt} pointerEvents="none">
+                <View
+                  style={[styles.paperBack, { backgroundColor: colors.accent }]}
+                />
+                <View
+                  style={[styles.paperFront, { backgroundColor: colors.card }]}
+                >
+                  <View
+                    style={[styles.paperFold, { backgroundColor: colors.border }]}
+                  />
+                  <View
+                    style={[
+                      styles.paperLineWide,
+                      { backgroundColor: colors.primary },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.paperLine,
+                      { backgroundColor: colors.mutedForeground },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.paperLineShort,
+                      { backgroundColor: colors.mutedForeground },
+                    ]}
+                  />
+                </View>
+                <View
+                  style={[
+                    styles.scanCorner,
+                    {
+                      backgroundColor: colors.destructive,
+                      borderColor: colors.foreground,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="scan"
+                    size={28}
+                    color={colors.destructiveForeground}
+                  />
+                </View>
+              </View>
+            </View>
+
+            <View
+              style={[
+                styles.dateCard,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+            >
+              <View style={styles.sectionHeading}>
+                <View style={styles.sectionHeadingText}>
+                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>
+                    Choose your dates
+                  </Text>
+                  <Text
+                    style={[styles.cardSubtitle, { color: colors.mutedForeground }]}
+                  >
+                    Both dates are included in the scan
+                  </Text>
+                </View>
+                <View style={[styles.calendarBadge, { backgroundColor: colors.accent }]}>
+                  <Ionicons
+                    name="calendar-clear-outline"
+                    size={18}
+                    color={colors.accentForeground}
+                  />
+                </View>
+              </View>
+              <View style={styles.dateRow}>
+                <View style={styles.dateField}>
+                  <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>
+                    FROM
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Start date, ${formatDate(startDate)}`}
+                    onPress={() => setDateTarget('start')}
+                    style={({ pressed }) => [
+                      styles.dateButton,
+                      {
+                        backgroundColor: colors.background,
+                        borderColor: colors.border,
+                        opacity: pressed ? 0.76 : 1,
+                      },
+                    ]}
+                    testID="start-date-button"
+                  >
+                    <Text style={[styles.dateValue, { color: colors.foreground }]}>
+                      {formatDate(startDate)}
+                    </Text>
+                    <Ionicons
+                      name="chevron-down"
+                      size={16}
+                      color={colors.mutedForeground}
+                    />
+                  </Pressable>
+                </View>
+                <View style={styles.dateArrow}>
+                  <Ionicons
+                    name="arrow-forward"
+                    size={16}
+                    color={colors.mutedForeground}
+                  />
+                </View>
+                <View style={styles.dateField}>
+                  <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>
+                    TO
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`End date, ${formatDate(endDate)}`}
+                    onPress={() => setDateTarget('end')}
+                    style={({ pressed }) => [
+                      styles.dateButton,
+                      {
+                        backgroundColor: colors.background,
+                        borderColor: colors.border,
+                        opacity: pressed ? 0.76 : 1,
+                      },
+                    ]}
+                    testID="end-date-button"
+                  >
+                    <Text style={[styles.dateValue, { color: colors.foreground }]}>
+                      {formatDate(endDate)}
+                    </Text>
+                    <Ionicons
+                      name="chevron-down"
+                      size={16}
+                      color={colors.mutedForeground}
+                    />
+                  </Pressable>
+                </View>
+              </View>
+
+              {dateTarget ? (
+                <DateTimePicker
+                  value={dateTarget === 'start' ? startDate : endDate}
+                  mode="date"
+                  display={Platform.OS === 'android' ? 'default' : 'compact'}
+                  maximumDate={new Date()}
+                  onChange={chooseDate}
+                />
+              ) : null}
+
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => void scanPhotos()}
+                disabled={isScanning}
+                style={({ pressed }) => [
+                  styles.scanButton,
+                  {
+                    backgroundColor: colors.primary,
+                    opacity: isScanning ? 0.74 : pressed ? 0.85 : 1,
+                  },
+                ]}
+                testID="scan-gallery-button"
+              >
+                {isScanning ? (
+                  <ActivityIndicator color={colors.primaryForeground} />
+                ) : (
+                  <>
+                    <Ionicons
+                      name="scan-outline"
+                      size={19}
+                      color={colors.primaryForeground}
+                    />
+                    <Text
+                      style={[
+                        styles.scanButtonText,
+                        { color: colors.primaryForeground },
+                      ]}
+                    >
+                      Scan my gallery
+                    </Text>
+                    <Ionicons
+                      name="arrow-forward"
+                      size={17}
+                      color={colors.primaryForeground}
+                    />
+                  </>
+                )}
+              </Pressable>
+
+              {isScanning ? (
+                <View style={styles.progressArea}>
+                  <View style={styles.progressHeading}>
+                    <Text style={[styles.progressText, { color: colors.mutedForeground }]}>
+                      {progress.total > 0
+                        ? `Checking photo ${Math.min(progress.checked + 1, progress.total)} of ${progress.total}`
+                        : 'Finding photos in this date range…'}
+                    </Text>
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={cancelScan}
+                      hitSlop={10}
+                      testID="cancel-scan-button"
+                    >
+                      <Text style={[styles.cancelText, { color: colors.primary }]}>
+                        Stop
+                      </Text>
+                    </Pressable>
+                  </View>
+                  {progress.total > 0 ? (
+                    <View
+                      accessibilityRole="progressbar"
+                      accessibilityValue={{
+                        min: 0,
+                        max: progress.total,
+                        now: Math.min(progress.checked, progress.total),
+                      }}
+                      style={[styles.progressTrack, { backgroundColor: colors.muted }]}
+                    >
+                      <View
+                        style={[
+                          styles.progressFill,
+                          {
+                            backgroundColor: colors.primary,
+                            width: `${Math.max(
+                              2,
+                              Math.round((progress.checked / progress.total) * 100),
+                            )}%`,
+                          },
+                        ]}
+                      />
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {permissionLimited ? (
+                <View style={[styles.notice, { backgroundColor: colors.accent }]}>
+                  <Ionicons
+                    name="information-circle-outline"
+                    size={17}
+                    color={colors.accentForeground}
+                  />
+                  <Text
+                    style={[styles.noticeText, { color: colors.accentForeground }]}
+                  >
+                    Limited access: only photos you allowed can be scanned.
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+
+            {hasScanned ? (
+              <View style={styles.resultsHeading}>
+                <View style={styles.resultsTitleWrap}>
+                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>
+                    Review matches
+                  </Text>
+                  <Text
+                    style={[styles.cardSubtitle, { color: colors.mutedForeground }]}
+                  >
+                    {scanWasCancelled
+                      ? `${matches.length} match${matches.length === 1 ? '' : 'es'} found before stopping`
+                      : `${matches.length} likely text-heavy photo${matches.length === 1 ? '' : 's'}`}
+                  </Text>
+                </View>
+                {matches.length > 0 ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={toggleAll}
+                    testID="select-all-button"
+                  >
+                    <Text style={[styles.selectAll, { color: colors.primary }]}>
+                      {allSelected ? 'Deselect all' : 'Select all'}
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : (
+              <View
+                style={[
+                  styles.privacyCard,
+                  { backgroundColor: colors.secondary },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.privacyIcon,
+                    { backgroundColor: colors.card },
+                  ]}
+                >
+                  <Ionicons name="shield-checkmark" size={18} color={colors.primary} />
+                </View>
+                <View style={styles.privacyCopy}>
+                  <Text style={[styles.privacyTitle, { color: colors.foreground }]}>
+                    Your photos stay yours
+                  </Text>
+                  <Text style={[styles.privacyText, { color: colors.mutedForeground }]}>
+                    Text recognition happens on this device. DocuSweep does not
+                    upload your gallery.
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+        }
+        ListEmptyComponent={hasScanned ? emptyResults : null}
+      />
+
+      {selectedIds.length > 0 ? (
+        <View
+          style={[
+            styles.bottomBar,
+            {
+              backgroundColor: colors.card,
+              borderTopColor: colors.border,
+              paddingBottom: Math.max(insets.bottom, 12),
+            },
+          ]}
+        >
+          <View style={styles.bottomCount}>
+            <View style={[styles.selectionDot, { backgroundColor: colors.primary }]}>
+              <Text
+                style={[
+                  styles.selectionNumber,
+                  { color: colors.primaryForeground },
+                ]}
+              >
+                {selectedIds.length > 99 ? '99+' : selectedIds.length}
+              </Text>
+            </View>
+            <Text style={[styles.selectedLabel, { color: colors.foreground }]}>
+              selected
+            </Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            onPress={deleteSelected}
+            style={({ pressed }) => [
+              styles.deleteButton,
+              {
+                backgroundColor: colors.destructive,
+                opacity: pressed ? 0.84 : 1,
+              },
+            ]}
+            testID="delete-selected-button"
+          >
+            <Ionicons name="trash-outline" size={17} color={colors.destructiveForeground} />
+            <Text style={[styles.deleteButtonText, { color: colors.destructiveForeground }]}>
+              Delete selected
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1 },
+  listContent: { paddingHorizontal: 20, paddingTop: 6, flexGrow: 1 },
+  topbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 18,
+    gap: 11,
+  },
+  brandMark: {
+    width: 42,
+    height: 42,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandText: { flex: 1 },
+  brandName: { fontSize: 17, fontWeight: '800', letterSpacing: -0.35 },
+  brandCaption: { fontSize: 11, marginTop: 2 },
+  privateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+  },
+  privateText: { fontSize: 10, fontWeight: '800' },
+  hero: {
+    minHeight: 208,
+    padding: 22,
+    borderRadius: 27,
+    marginBottom: 16,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  heroCopy: { flex: 1, zIndex: 1, paddingRight: 4 },
+  eyebrow: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    marginBottom: 10,
+  },
+  heroTitle: {
+    fontSize: 27,
+    lineHeight: 31,
+    fontWeight: '800',
+    letterSpacing: -0.75,
+  },
+  heroBody: {
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 9,
+    maxWidth: 225,
+  },
+  heroArt: {
+    width: 88,
+    height: 122,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -7,
+    transform: [{ rotate: '5deg' }],
+  },
+  paperBack: {
+    position: 'absolute',
+    width: 68,
+    height: 88,
+    borderRadius: 10,
+    transform: [{ rotate: '-15deg' }, { translateX: 8 }],
+  },
+  paperFront: {
+    width: 66,
+    height: 90,
+    borderRadius: 10,
+    paddingTop: 27,
+    paddingHorizontal: 12,
+    gap: 8,
+    transform: [{ rotate: '8deg' }],
+  },
+  paperFold: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 18,
+    height: 18,
+    borderBottomLeftRadius: 7,
+  },
+  paperLineWide: { width: 39, height: 4, borderRadius: 4 },
+  paperLine: { width: 35, height: 3, borderRadius: 4 },
+  paperLineShort: { width: 25, height: 3, borderRadius: 4 },
+  scanCorner: {
+    position: 'absolute',
+    right: -1,
+    bottom: 2,
+    width: 43,
+    height: 43,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+  },
+  dateCard: {
+    borderRadius: 23,
+    borderWidth: 1,
+    padding: 17,
+    marginBottom: 15,
+  },
+  sectionHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  sectionHeadingText: { flex: 1 },
+  cardTitle: { fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
+  cardSubtitle: { fontSize: 11, marginTop: 4 },
+  calendarBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 7 },
+  dateField: { flex: 1 },
+  fieldLabel: {
+    fontSize: 9,
+    letterSpacing: 1,
+    fontWeight: '800',
+    marginBottom: 6,
+    marginLeft: 2,
+  },
+  dateButton: {
+    minHeight: 45,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 4,
+  },
+  dateValue: { fontSize: 11, fontWeight: '700', flexShrink: 1 },
+  dateArrow: { width: 18, height: 45, alignItems: 'center', justifyContent: 'center' },
+  scanButton: {
+    minHeight: 52,
+    marginTop: 17,
+    paddingHorizontal: 16,
+    borderRadius: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  scanButtonText: { fontSize: 14, fontWeight: '800', flex: 1, textAlign: 'center' },
+  progressArea: { marginTop: 14 },
+  progressHeading: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+  },
+  progressText: { fontSize: 10, flex: 1 },
+  cancelText: { fontSize: 11, fontWeight: '800', paddingVertical: 2 },
+  progressTrack: { height: 5, borderRadius: 5, overflow: 'hidden', marginTop: 9 },
+  progressFill: { height: 5, borderRadius: 5 },
+  notice: {
+    marginTop: 13,
+    borderRadius: 12,
+    padding: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  noticeText: { flex: 1, fontSize: 10, lineHeight: 15 },
+  privacyCard: {
+    borderRadius: 17,
+    padding: 15,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 11,
+    marginBottom: 16,
+  },
+  privacyIcon: {
+    width: 31,
+    height: 31,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  privacyCopy: { flex: 1, paddingTop: 1 },
+  privacyTitle: { fontSize: 12, fontWeight: '800', marginBottom: 3 },
+  privacyText: { fontSize: 10, lineHeight: 15 },
+  resultsHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 3,
+    marginBottom: 12,
+  },
+  resultsTitleWrap: { flex: 1 },
+  selectAll: { fontSize: 11, fontWeight: '800', paddingVertical: 8, paddingLeft: 10 },
+  matchCard: {
+    minHeight: 96,
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 9,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  thumbnail: {
+    width: 65,
+    height: 76,
+    borderRadius: 10,
+  },
+  matchContent: { flex: 1, justifyContent: 'center' },
+  matchDate: { fontSize: 12, fontWeight: '800' },
+  matchMeta: { fontSize: 9, marginTop: 4 },
+  matchSnippet: { fontSize: 10, lineHeight: 14, marginTop: 5 },
+  checkCircle: {
+    width: 23,
+    height: 23,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 2,
+  },
+  emptyCard: {
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 22,
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  emptyIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  emptyTitle: { fontSize: 14, fontWeight: '800', textAlign: 'center' },
+  emptyText: { fontSize: 11, lineHeight: 17, textAlign: 'center', marginTop: 6 },
+  bottomBar: {
+    borderTopWidth: 1,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  bottomCount: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  selectionDot: {
+    minWidth: 25,
+    height: 25,
+    borderRadius: 9,
+    paddingHorizontal: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectionNumber: { fontSize: 10, fontWeight: '900' },
+  selectedLabel: { fontSize: 12, fontWeight: '700' },
+  deleteButton: {
+    minHeight: 43,
+    borderRadius: 13,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+  deleteButtonText: { fontSize: 11, fontWeight: '800' },
+});

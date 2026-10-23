@@ -199,23 +199,37 @@ export default function HomeScreen() {
       );
 
       const sampleDates = assets
-        .filter((asset) => {
-          const date = new Date(asset.creationTime);
-          return date.getFullYear() === 2024 &&
-            date.getMonth() === 1 &&
-            date.getDate() === 12;
-        })
-        .slice(0, 5)
-        .map((asset) =>
-          `${new Date(asset.creationTime).toISOString()} | ${asset.filename}`
-        );
+  .filter((asset) => {
+    const date = new Date(asset.creationTime);
+    return (
+      date.getFullYear() === 2024 &&
+      date.getMonth() === 1 &&
+      date.getDate() === 12
+    );
+  })
+  .slice(0, 5);
 
-      Alert.alert(
-        'Timestamp check',
-        `Photos matching selected range: ${selectedDateAssets.length}\n\n` +
-        `Sample Feb 12 records:\n${sampleDates.join('\n') || 'None found'}`
-      );
+const samplesWithDates = await Promise.all(
+  sampleDates.map(async (asset) => {
+    const info = await MediaLibrary.getAssetInfoAsync(asset);
 
+    return [
+      `File: ${asset.filename}`,
+      `Creation: ${new Date(asset.creationTime).toISOString()}`,
+      `Modification: ${
+        info.modificationTime
+          ? new Date(info.modificationTime).toISOString()
+          : 'Unavailable'
+      }`,
+    ].join('\n');
+  })
+);
+
+Alert.alert(
+  'Timestamp comparison',
+  `Records with Feb 12 creation dates: ${sampleDates.length}\n\n` +
+    (samplesWithDates.join('\n\n') || 'No matching creation dates found.')
+);
       assets = selectedDateAssets;
       // This package uses native Google ML Kit. Its module is loaded only when
       // scanning starts so the screen can still render in a generic preview.

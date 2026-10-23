@@ -152,7 +152,7 @@ export default function HomeScreen() {
       setPermissionLimited(permission.accessPrivileges === 'limited');
 
       let assets: MediaLibrary.Asset[] = [];
-    let totalPhotosRetrieved = 0;
+      let totalPhotosRetrieved = 0;
       let cursor: string | undefined;
       let hasNextPage = true;
       const from = getDayStart(startDate).getTime();
@@ -166,7 +166,7 @@ export default function HomeScreen() {
           sortBy: [[MediaLibrary.SortBy.creationTime, false]],
         });
         assets = [...assets, ...page.assets];
-      totalPhotosRetrieved = assets.length;
+        totalPhotosRetrieved = assets.length;
         cursor = page.endCursor;
         hasNextPage = page.hasNextPage;
         setProgress({ checked: 0, total: assets.length });
@@ -194,10 +194,29 @@ export default function HomeScreen() {
         `Selected: ${new Date(from).toLocaleDateString()} to ${new Date(to).toLocaleDateString()}. ${retrievedCount} photos retrieved. ${availableDates}`
       );
 
-      assets = assets.filter(
+      const selectedDateAssets = assets.filter(
         (asset) => asset.creationTime >= from && asset.creationTime <= to
       );
 
+      const sampleDates = assets
+        .filter((asset) => {
+          const date = new Date(asset.creationTime);
+          return date.getFullYear() === 2024 &&
+            date.getMonth() === 1 &&
+            date.getDate() === 12;
+        })
+        .slice(0, 5)
+        .map((asset) =>
+          `${new Date(asset.creationTime).toISOString()} | ${asset.filename}`
+        );
+
+      Alert.alert(
+        'Timestamp check',
+        `Photos matching selected range: ${selectedDateAssets.length}\n\n` +
+        `Sample Feb 12 records:\n${sampleDates.join('\n') || 'None found'}`
+      );
+
+      assets = selectedDateAssets;
       // This package uses native Google ML Kit. Its module is loaded only when
       // scanning starts so the screen can still render in a generic preview.
       let recognizeText: (uri: string) => Promise<{ text?: string; blocks?: Array<{ lines?: unknown[] }> }>;

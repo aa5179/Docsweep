@@ -152,6 +152,7 @@ export default function HomeScreen() {
       setPermissionLimited(permission.accessPrivileges === 'limited');
 
       let assets: MediaLibrary.Asset[] = [];
+    let totalPhotosRetrieved = 0;
       let cursor: string | undefined;
       let hasNextPage = true;
       const from = getDayStart(startDate).getTime();
@@ -162,11 +163,10 @@ export default function HomeScreen() {
           mediaType: 'photo',
           first: 100,
           after: cursor,
-          createdAfter: from,
-          createdBefore: to,
           sortBy: [[MediaLibrary.SortBy.creationTime, false]],
         });
         assets = [...assets, ...page.assets];
+      totalPhotosRetrieved = assets.length;
         cursor = page.endCursor;
         hasNextPage = page.hasNextPage;
         setProgress({ checked: 0, total: assets.length });
@@ -177,6 +177,26 @@ export default function HomeScreen() {
         setScanWasCancelled(true);
         return;
       }
+
+      const retrievedCount = assets.length;
+      const dateBounds = assets.reduce(
+        (bounds, asset) => ({
+          min: Math.min(bounds.min, asset.creationTime),
+          max: Math.max(bounds.max, asset.creationTime),
+        }),
+        { min: Infinity, max: -Infinity }
+      );
+      const availableDates = retrievedCount
+        ? `Photo dates: ${new Date(dateBounds.min).toLocaleDateString()} to ${new Date(dateBounds.max).toLocaleDateString()}.`
+        : 'No photos were returned.';
+      Alert.alert(
+        'Date filter diagnostic',
+        `Selected: ${new Date(from).toLocaleDateString()} to ${new Date(to).toLocaleDateString()}. ${retrievedCount} photos retrieved. ${availableDates}`
+      );
+
+      assets = assets.filter(
+        (asset) => asset.creationTime >= from && asset.creationTime <= to
+      );
 
       // This package uses native Google ML Kit. Its module is loaded only when
       // scanning starts so the screen can still render in a generic preview.
@@ -335,7 +355,7 @@ export default function HomeScreen() {
         <Pressable
           accessibilityRole="checkbox"
           accessibilityState={{ checked: isSelected }}
-          accessibilityLabel={`Photo from ${formatDate(new Date(item.creationTime * 1000))}, ${item.wordCount} detected words`}
+          accessibilityLabel={`Photo from ${formatDate(new Date(item.creationTime))}, ${item.wordCount} detected words`}
           onPress={() => toggleSelected(item.id)}
           style={({ pressed }) => [
             styles.matchCard,
@@ -355,7 +375,7 @@ export default function HomeScreen() {
           />
           <View style={styles.matchContent}>
             <Text style={[styles.matchDate, { color: colors.foreground }]}>
-              {formatDate(new Date(item.creationTime * 1000))}
+              {formatDate(new Date(item.creationTime))}
             </Text>
             <Text style={[styles.matchMeta, { color: colors.mutedForeground }]}>
               {item.width} × {item.height} · {item.wordCount} detected words

@@ -11,7 +11,13 @@
       "supportsTablet": false
     },
     "android": {
-      "package": "com.docusweep.android"
+      "package": "com.docusweep.android",
+      "permissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -24,13 +30,21 @@
         {
           "photosPermission": "DocuSweep needs access to your photos to find document and notebook pictures.",
           "savePhotosPermission": "DocuSweep does not need to save photos.",
-          "granularPermissions": ["photo"]
+          "granularPermissions": [
+            "photo"
+          ]
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ccecd5c3-f538-4b5f-9cca-323b86a56b63"
+      }
     }
   }
 }

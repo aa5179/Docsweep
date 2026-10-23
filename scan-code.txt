@@ -1,0 +1,116 @@
+      const allowed =
+        permission.granted || permission.accessPrivileges === 'limited';
+
+      if (!allowed) {
+        if (!permission.canAskAgain) {
+          Alert.alert(
+            'Photo access is turned off',
+            'Allow photo access in Android settings to scan your gallery.',
+            [
+              { text: 'Not now', style: 'cancel' },
+              { text: 'Open settings', onPress: openSettings },
+            ],
+          );
+        } else {
+          Alert.alert(
+            'Photo access needed',
+            'Allow DocuSweep to access photos so it can look for documents and notes.',
+          );
+        }
+        return;
+      }
+
+      setPermissionLimited(permission.accessPrivileges === 'limited');
+
+      let assets: MediaLibrary.Asset[] = [];
+    let totalPhotosRetrieved = 0;
+      let cursor: string | undefined;
+      let hasNextPage = true;
+      const from = getDayStart(startDate).getTime();
+      const to = getDayEnd(endDate).getTime();
+
+      while (hasNextPage && !cancelScanRef.current) {
+        const page = await MediaLibrary.getAssetsAsync({
+          mediaType: 'photo',
+          first: 100,
+          after: cursor,
+          sortBy: [[MediaLibrary.SortBy.creationTime, false]],
+        });
+        assets = [...assets, ...page.assets];
+      totalPhotosRetrieved = assets.length;
+        cursor = page.endCursor;
+        hasNextPage = page.hasNextPage;
+        setProgress({ checked: 0, total: assets.length });
+      }
+
+      if (cancelScanRef.current) {
+        setHasScanned(true);
+        setScanWasCancelled(true);
+        return;
+      }
+
+      // This package uses native Google ML Kit. Its module is loaded only when
+      // scanning starts so the screen can still render in a generic preview.
+      let recognizeText: (uri: string) => Promise<{ text?: string; blocks?: Array<{ lines?: unknown[] }> }>;
+      try {
+        const textRecognition = await import(
+          '@react-native-ml-kit/text-recognition'
+        );
+        recognizeText = (uri) => textRecognition.default.recognize(uri);
+      } catch {
+        Alert.alert(
+          'Android build required',
+          'On-device text recognition needs the DocuSweep Android build. It is not available in the standard Expo Go preview.',
+        );
+        return;
+      }
+
+      const result: ScanResult = {
+        matches: [],
+        checked: 0,
+        total: assets.length,
+        cancelled: false,
+      };
+      setProgress({ checked: 0, total: assets.length });
+
+      for (let index = 0; index < assets.length; index += 1) {
+        if (cancelScanRef.current) {
+          result.cancelled = true;
+          break;
+        }
+
+        const asset = assets[index];
+        setProgress({ checked: index, total: assets.length });
+        try {
+          const recognition = await recognizeText(asset.uri);
+          const text = (recognition.text ?? '').trim();
+          const lineCount =
+            recognition.blocks?.reduce(
+              (totalLines, block) => totalLines + (block.lines?.length ?? 0),
+              0,
+            ) ?? 0;
+          const wordCount = text.split(/\s+/).filter(Boolean).length;
+
+          // OCR is a first-pass signal, not a perfect document classifier.
+          // Every result remains reviewable before any deletion is requested.
+          if (
+            wordCount >= 8 ||
+            lineCount >= 3 ||
+            (wordCount >= 4 && asset.width > asset.height * 0.8)
+          ) {
+            result.matches.push({ ...asset, extractedText: text, wordCount });
+          }
+        } catch {
+          // Unsupported image formats and individual OCR failures are skipped.
+        }
+        result.checked = index + 1;
+        setProgress({ checked: result.checked, total: assets.length });
+      }
+
+      setMatches(result.matches);
+      setHasScanned(true);
+      setScanWasCancelled(result.cancelled);
+      if (result.cancelled) {
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Warning,
+        );

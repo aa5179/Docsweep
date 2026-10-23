@@ -198,20 +198,24 @@ export default function HomeScreen() {
         (asset) => asset.creationTime >= from && asset.creationTime <= to
       );
 
-      const sampleDates = assets
-  .filter((asset) => {
-    const date = new Date(asset.creationTime);
-    return (
-      date.getFullYear() === 2024 &&
-      date.getMonth() === 1 &&
-      date.getDate() === 12
-    );
-  })
-  .slice(0, 5);
+      
+const sampleDates = assets.slice(0, 5);
 
 const samplesWithDates = await Promise.all(
   sampleDates.map(async (asset) => {
     const info = await MediaLibrary.getAssetInfoAsync(asset);
+
+    let exifDate = 'Unavailable';
+
+    if (info.exif) {
+      const exif = info.exif as Record<string, unknown>;
+      exifDate = String(
+        exif.DateTimeOriginal ??
+          exif.DateTimeDigitized ??
+          exif.DateTime ??
+          'Unavailable'
+      );
+    }
 
     return [
       `File: ${asset.filename}`,
@@ -221,14 +225,14 @@ const samplesWithDates = await Promise.all(
           ? new Date(info.modificationTime).toISOString()
           : 'Unavailable'
       }`,
+      `EXIF capture date: ${exifDate}`,
     ].join('\n');
   })
 );
 
 Alert.alert(
-  'Timestamp comparison',
-  `Records with Feb 12 creation dates: ${sampleDates.length}\n\n` +
-    (samplesWithDates.join('\n\n') || 'No matching creation dates found.')
+  'Photo metadata check',
+  samplesWithDates.join('\n\n') || 'No photos returned.'
 );
       assets = selectedDateAssets;
       // This package uses native Google ML Kit. Its module is loaded only when

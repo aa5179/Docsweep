@@ -607,6 +607,10 @@ export default function HomeScreen() {
       scanWasCancelled={scanWasCancelled}
       onChooseDate={chooseDate}
       onSetDateTarget={setDateTarget}
+      onSetDateRange={(nextStart, nextEnd) => {
+        setStartDate(nextStart);
+        setEndDate(nextEnd);
+      }}
       onScan={() => {
         void scanPhotos();
       }}

@@ -14,7 +14,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ArcadeColors = {
@@ -62,6 +62,7 @@ type ArcadeMissionShellProps = {
   scanWasCancelled: boolean;
   onChooseDate: (event: DateTimePickerEvent, date?: Date) => void;
   onSetDateTarget: (target: 'start' | 'end') => void;
+  onSetDateRange: (start: Date, end: Date) => void;
   onScan: () => void;
   onCancel: () => void;
   onToggleSelected: (id: string) => void;
@@ -145,10 +146,52 @@ function DateControls({
   dateTarget,
   onChooseDate,
   onSetDateTarget,
+  onSetDateRange,
 }: Pick<
   ArcadeMissionShellProps,
-  'colors' | 'startDate' | 'endDate' | 'dateTarget' | 'onChooseDate' | 'onSetDateTarget'
+  | 'colors'
+  | 'startDate'
+  | 'endDate'
+  | 'dateTarget'
+  | 'onChooseDate'
+  | 'onSetDateTarget'
+  | 'onSetDateRange'
 >) {
+  const [displayedMonth, setDisplayedMonth] = useState(
+    () => new Date(startDate.getFullYear(), startDate.getMonth(), 1),
+  );
+  const [calendarTarget, setCalendarTarget] = useState<'start' | 'end'>('start');
+
+  useEffect(() => {
+    setDisplayedMonth(new Date(startDate.getFullYear(), startDate.getMonth(), 1));
+  }, [startDate]);
+
+  const monthStart = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth(), 1);
+  const daysInMonth = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth() + 1, 0).getDate();
+  const leadingDays = monthStart.getDay();
+  const calendarDays = Array.from({ length: leadingDays + daysInMonth }, (_, index) =>
+    index < leadingDays ? null : index - leadingDays + 1,
+  );
+  while (calendarDays.length % 7 !== 0) calendarDays.push(null);
+
+  const setCalendarDate = (day: number) => {
+    const chosen = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth(), day);
+    if (calendarTarget === 'start') {
+      onSetDateRange(chosen, chosen > endDate ? chosen : endDate);
+    } else {
+      onSetDateRange(chosen < startDate ? startDate : startDate, chosen);
+    }
+  };
+
+  const setShortcut = (kind: 'today' | 'week' | 'month') => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (kind === 'today') onSetDateRange(today, now);
+    if (kind === 'week') onSetDateRange(new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000), now);
+    if (kind === 'month') onSetDateRange(new Date(today.getFullYear(), today.getMonth(), 1), now);
+    setDisplayedMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+  };
+
   return (
     <View style={[styles.dateCard, { backgroundColor: colors.secondary, borderColor: colors.foreground }]}>
       <View style={styles.cardHeader}>
@@ -165,7 +208,7 @@ function DateControls({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Select start date, ${formatDate(startDate)}`}
-          onPress={() => onSetDateTarget('start')}
+          onPress={() => { setCalendarTarget('start'); onSetDateTarget('start'); }}
           style={[styles.dateButton, { backgroundColor: colors.card, borderColor: colors.foreground }]}
           testID="start-date-button"
         >
@@ -178,7 +221,7 @@ function DateControls({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Select end date, ${formatDate(endDate)}`}
-          onPress={() => onSetDateTarget('end')}
+          onPress={() => { setCalendarTarget('end'); onSetDateTarget('end'); }}
           style={[styles.dateButton, { backgroundColor: colors.card, borderColor: colors.foreground }]}
           testID="end-date-button"
         >
@@ -203,6 +246,48 @@ function DateControls({
         <Text style={[styles.rangeText, { color: colors.foreground }]}>
           {formatDate(startDate).toUpperCase()} - {formatDate(endDate).toUpperCase()}
         </Text>
+      </View>
+      <View style={[styles.calendarBox, { backgroundColor: colors.card, borderColor: colors.foreground }]}>
+        <View style={styles.calendarHeader}>
+          <Text style={[styles.calendarMonth, { color: colors.foreground }]}>
+            {displayedMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }).toUpperCase()}
+          </Text>
+          <View style={styles.calendarArrows}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Previous month" onPress={() => setDisplayedMonth(new Date(displayedMonth.getFullYear(), displayedMonth.getMonth() - 1, 1))}>
+              <Ionicons name="arrow-back" size={17} color={colors.foreground} />
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Next month" onPress={() => setDisplayedMonth(new Date(displayedMonth.getFullYear(), displayedMonth.getMonth() + 1, 1))}>
+              <Ionicons name="arrow-forward" size={17} color={colors.foreground} />
+            </Pressable>
+          </View>
+        </View>
+        <View style={styles.weekRow}>
+          {['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'].map((day) => <Text key={day} style={[styles.weekLabel, { color: colors.mutedForeground }]}>{day}</Text>)}
+        </View>
+        <View style={styles.calendarGrid}>
+          {calendarDays.map((day, index) => {
+            if (day === null) return <View key={`blank-${index}`} style={styles.calendarCell} />;
+            const current = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth(), day);
+            const inRange = current >= new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) && current <= new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+            const isStart = current.toDateString() === startDate.toDateString();
+            const isEnd = current.toDateString() === endDate.toDateString();
+            return (
+              <Pressable key={`day-${day}`} accessibilityRole="button" accessibilityLabel={`Choose ${formatDate(current)}`} onPress={() => setCalendarDate(day)} style={[styles.calendarCell, inRange ? { backgroundColor: colors.accent } : null, (isStart || isEnd) ? { backgroundColor: colors.primary } : null]}>
+                <Text style={[styles.calendarDay, { color: isStart || isEnd ? colors.primaryForeground : colors.foreground }]}>{String(day).padStart(2, '0')}</Text>
+                {(isStart || isEnd) ? <View style={[styles.calendarDot, { backgroundColor: colors.primaryForeground }]} /> : null}
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+      <Text style={[styles.shortcutHeading, { color: colors.mutedForeground }]}>HUNT SHORTCUTS</Text>
+      <View style={styles.shortcutRow}>
+        <Pressable accessibilityRole="button" onPress={() => setShortcut('today')} style={[styles.shortcut, { backgroundColor: colors.card, borderColor: colors.foreground }]}><Ionicons name="today-outline" size={16} color={colors.primary} /><Text style={[styles.shortcutText, { color: colors.foreground }]}>TODAY</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => setShortcut('week')} style={[styles.shortcut, { backgroundColor: colors.primary, borderColor: colors.foreground }]}><Ionicons name="checkmark-circle-outline" size={16} color={colors.primaryForeground} /><Text style={[styles.shortcutText, { color: colors.primaryForeground }]}>LAST 7 DAYS</Text></Pressable>
+      </View>
+      <View style={styles.shortcutRow}>
+        <Pressable accessibilityRole="button" onPress={() => setShortcut('month')} style={[styles.shortcut, { backgroundColor: colors.card, borderColor: colors.foreground }]}><Ionicons name="calendar-outline" size={16} color={colors.primary} /><Text style={[styles.shortcutText, { color: colors.foreground }]}>THIS MONTH</Text></Pressable>
+        <View style={[styles.telemetry, { backgroundColor: colors.accent, borderColor: colors.foreground }]}><Ionicons name="locate-outline" size={16} color={colors.primary} /><Text style={[styles.shortcutText, { color: colors.foreground }]}>RADAR READY</Text></View>
       </View>
     </View>
   );
@@ -270,6 +355,7 @@ export function ArcadeMissionShell(props: ArcadeMissionShellProps) {
     scanWasCancelled,
     onChooseDate,
     onSetDateTarget,
+    onSetDateRange,
     onScan,
     onCancel,
     onToggleSelected,
@@ -407,6 +493,7 @@ export function ArcadeMissionShell(props: ArcadeMissionShellProps) {
             dateTarget={dateTarget}
             onChooseDate={onChooseDate}
             onSetDateTarget={onSetDateTarget}
+            onSetDateRange={onSetDateRange}
           />
           <PixelButton color={colors.primary} textColor={colors.primaryForeground} icon="scan-outline" onPress={onScan} disabled={isScanning} testID="scan-gallery-button">START SCANNING</PixelButton>
           <View style={styles.privacyLine}>
@@ -530,6 +617,21 @@ const styles = StyleSheet.create({
   dateValue: { fontFamily: 'monospace', fontSize: 11, fontWeight: '800' },
   rangeSummary: { marginTop: 9, borderWidth: 2, borderRadius: 3, padding: 9 },
   rangeText: { fontFamily: 'monospace', fontSize: 12, fontWeight: '800', marginTop: 4 },
+  calendarBox: { marginTop: 10, borderWidth: 2, borderRadius: 3, padding: 9 },
+  calendarHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  calendarMonth: { fontFamily: 'monospace', fontSize: 11, fontWeight: '800', letterSpacing: 0.6 },
+  calendarArrows: { flexDirection: 'row', gap: 12 },
+  weekRow: { flexDirection: 'row', marginBottom: 4 },
+  weekLabel: { flex: 1, textAlign: 'center', fontFamily: 'monospace', fontSize: 8, fontWeight: '800' },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 3 },
+  calendarCell: { width: '13.8%', minHeight: 30, alignItems: 'center', justifyContent: 'center' },
+  calendarDay: { fontFamily: 'monospace', fontSize: 9, fontWeight: '800' },
+  calendarDot: { width: 3, height: 3, borderRadius: 2, marginTop: 2 },
+  shortcutHeading: { fontFamily: 'monospace', fontSize: 9, fontWeight: '800', letterSpacing: 1, marginTop: 12, marginBottom: 6 },
+  shortcutRow: { flexDirection: 'row', gap: 7, marginBottom: 7 },
+  shortcut: { flex: 1, minHeight: 42, borderWidth: 2, borderRadius: 3, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  shortcutText: { fontFamily: 'monospace', fontSize: 9, fontWeight: '800', letterSpacing: 0.3 },
+  telemetry: { flex: 1, minHeight: 42, borderWidth: 2, borderRadius: 3, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
   pixelButton: { minHeight: 50, borderWidth: 2, borderColor: '#32252A', borderRadius: 4, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, shadowColor: '#32252A', shadowOffset: { width: 3, height: 3 }, shadowOpacity: 1, shadowRadius: 0, elevation: 3, marginBottom: 10 },
   pixelButtonPressed: { transform: [{ translateX: 2 }, { translateY: 2 }], shadowOffset: { width: 1, height: 1 } },
   pixelButtonText: { fontFamily: 'monospace', fontSize: 11, fontWeight: '800', letterSpacing: 0.7 },

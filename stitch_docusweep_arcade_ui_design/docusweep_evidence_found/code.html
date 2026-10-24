@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><title>DocuSweep</title><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@600;700;800&amp;family=Space+Mono:ital,wght@0,400;0,700;1,700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-primary-fixed": "#410004", "secondary": "#ab3047", "tertiary-fixed-dim": "#e8bdaf", "outline": "#8e706e", "surface-dim": "#ead4db", "error-container": "#ffdad6", "error": "#ba1a1a", "on-tertiary-fixed": "#2d150d", "on-secondary-fixed-variant": "#8a1631", "inverse-primary": "#ffb3ae", "surface-bright": "#fff8f8", "on-secondary-fixed": "#40000f", "inverse-surface": "#3a2d32", "surface-container-highest": "#f3dde4", "tertiary-container": "#906c61", "primary-fixed-dim": "#ffb3ae", "on-error-container": "#93000a", "inverse-on-surface": "#ffecf1", "surface-container": "#ffe8ef", "primary-container": "#d33e3e", "secondary-container": "#fe6f83", "secondary-fixed": "#ffdadb", "tertiary-fixed": "#ffdbcf", "on-primary-container": "#fffbff", "on-background": "#24181d", "surface-variant": "#f3dde4", "tertiary": "#755449", "surface": "#fff8f8", "surface-container-high": "#f9e3e9", "on-primary": "#ffffff", "on-surface": "#24181d", "primary-fixed": "#ffdad7", "primary": "#b02429", "on-tertiary-fixed-variant": "#5e3f35", "on-tertiary": "#ffffff", "on-surface-variant": "#5a403f", "on-secondary": "#ffffff", "on-secondary-container": "#700021", "surface-container-lowest": "#ffffff", "on-tertiary-container": "#fffbff", "surface-tint": "#b4262b", "surface-container-low": "#fff0f3", "on-error": "#ffffff", "on-primary-fixed-variant": "#910616", "background": "#fff8f8", "outline-variant": "#e2bebb", "secondary-fixed-dim": "#ffb2b9" }, "borderRadius": { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, "spacing": { "margin": "1.25rem", "space-md": "0.75rem", "space-sm": "0.5rem", "gutter": "0.75rem", "space-xs": "0.25rem", "space-lg": "1rem", "gutter-mobile": "0.5rem", "space-xl": "1.5rem", "margin-mobile": "1rem" }, "fontFamily": { "label-lg": ["Space Mono"], "headline-md": ["Space Mono"], "label-md": ["Space Mono"], "headline-xl-mobile": ["Space Mono"], "body-md": ["Nunito Sans"], "body-sm": ["Nunito Sans"], "label-sm": ["Space Mono"], "body-lg": ["Nunito Sans"], "headline-xl": ["Space Mono"], "headline-lg": ["Space Mono"] }, "fontSize": { "label-lg": ["13px", { "lineHeight": "18px", "letterSpacing": "0.05em", "fontWeight": "700" }], "headline-md": ["16px", { "lineHeight": "24px", "letterSpacing": "0.04em", "fontWeight": "700" }], "label-md": ["11px", { "lineHeight": "16px", "letterSpacing": "0.08em", "fontWeight": "700" }], "headline-xl-mobile": ["22px", { "lineHeight": "30px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "600" }], "body-sm": ["12px", { "lineHeight": "18px", "fontWeight": "600" }], "label-sm": ["9px", { "lineHeight": "12px", "letterSpacing": "0.1em", "fontWeight": "700" }], "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "700" }], "headline-xl": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "headline-lg": ["20px", { "lineHeight": "28px", "letterSpacing": "0em", "fontWeight": "700" }] } } } };</script><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}.pixel-box-shadow{box-shadow:3px 3px 0px #32252a;}.pixel-box-shadow-sm{box-shadow:2px 2px 0px #32252a;}.pixel-pressed:active{transform:translate(2px,2px);box-shadow:1px 1px 0px #32252a;}</style></head><body class="bg-surface font-body-md text-body-md text-on-surface flex flex-col min-h-screen selection:bg-primary selection:text-on-primary"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-28 px-margin-mobile flex flex-col justify-between py-space-xs"><div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm tracking-widest"><span>12:34</span><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-[14px]">network_wifi</span><span class="material-symbols-outlined text-[14px]">signal_cellular_4_bar</span><span class="material-symbols-outlined text-[14px]">battery_charging_full</span></div></div><div class="flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-sm"><img alt="DocuSweep Detective Badge Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1WxhfzHOjvoYQEnnNYNoOs7zWUCGooLImhMXQWwgpAuvlA1k-D8p_z33KbANlRNqQOyuE0JlEUwQzJ8uIPy5s4Ygtme7Ezexuc-zROvXGTmT_vU6dvUGfcd1VSZ759XM5U4-OOGpm2FjemzrEewH0bBy9EhVaIjOSF-DYj77G_0e7f-2KJi7SGtMI3U6lmse9nxJ2R83hkMkLGVTyVghNmoXWB5MPx4_1EOODeNzOrHoObMlrpP39__5D7A"/><div class="flex flex-col"><span class="font-headline-md text-headline-md tracking-wider text-on-surface leading-none">DOCUSWEEP</span><span class="font-label-sm text-label-sm text-primary uppercase tracking-wider">Evidence</span></div></div><div class="flex items-center gap-space-sm"><button aria-label="Settings" class="w-11 h-11 flex items-center justify-center bg-surface-container rounded text-on-surface hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-[20px]">settings</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div><div class="flex items-center gap-space-xs"><div class="inline-flex items-center gap-space-xs px-space-xs py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm"><span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span><span>LVL 01 - APPRENTICE DETECTIVE</span></div></div></div></header><main class="flex flex-col relative w-full px-margin-mobile pt-28 pb-32 bg-surface"><div class="flex flex-col w-full gap-space-md">
+<!-- Interactive Demo Switcher (Simulates Found vs Empty Scan) -->
+<section class="bg-surface-container-high p-space-xs rounded-xl flex items-center justify-between shadow-sm">
+<div class="flex items-center gap-space-xs pl-space-xs">
+<span class="material-symbols-outlined text-primary text-[18px]">tune</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">SIMULATOR:</span>
+</div>
+<div class="inline-flex bg-surface-container rounded-lg p-0.5 gap-1">
+<button class="px-space-sm py-1 rounded font-label-sm text-label-sm uppercase transition-all bg-primary text-on-primary shadow-sm flex items-center gap-1" id="toggle-found-btn" onclick="switchState('found')">
+<span class="material-symbols-outlined text-[14px]">checklist</span>
+<span>FOUND (28)</span>
+</button>
+<button class="px-space-sm py-1 rounded font-label-sm text-label-sm uppercase transition-all text-on-surface-variant hover:text-on-surface flex items-center gap-1" id="toggle-empty-btn" onclick="switchState('empty')">
+<span class="material-symbols-outlined text-[14px]">search_off</span>
+<span>EMPTY (0)</span>
+</button>
+</div>
+</section>
+<!-- ========================================== -->
+<!-- STATE A: EVIDENCE DETECTED (28 CLUES)      -->
+<!-- ========================================== -->
+<div class="flex flex-col w-full gap-space-md" id="view-found">
+<!-- Top Pixel Mission HUD Banner -->
+<section class="bg-surface-container rounded-xl p-space-md shadow-sm relative overflow-hidden">
+<!-- Retro Decorative Pattern Strip -->
+<div class="flex items-center justify-between pb-space-xs mb-space-xs">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-primary animate-ping"></span>
+<span class="font-label-sm text-label-sm text-primary tracking-widest uppercase">SCAN COMPLETE // TARGET LOCKED</span>
+</div>
+<span class="font-label-sm text-label-sm bg-primary-fixed text-on-primary-fixed px-1.5 py-0.5 rounded">OCT 01 - OCT 24</span>
+</div>
+<div class="flex items-center justify-between gap-space-md">
+<div class="flex flex-col">
+<h2 class="font-headline-xl-mobile text-headline-xl-mobile text-on-surface uppercase tracking-tight">
+            28 CLUES SPOTTED!
+          </h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+            OCR scan isolated 28 notes, slides &amp; receipts hogging <strong class="text-secondary font-bold">86.4 MB</strong>.
+          </p>
+</div>
+<!-- Retro Detective Celebrating Badge -->
+<div class="relative w-14 h-14 shrink-0 bg-primary-container/15 rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[32px] animate-bounce">verified</span>
+<span class="absolute -top-1 -right-1 material-symbols-outlined text-secondary text-[16px]">arrow_back_ios_new</span>
+</div>
+</div>
+<!-- Arcade EXP Ticker Bar -->
+<div class="mt-space-sm bg-surface rounded-lg p-space-xs flex items-center justify-between shadow-xs">
+<div class="flex items-center gap-space-xs">
+<span class="font-label-sm text-label-sm text-secondary bg-secondary-fixed px-1.5 py-0.5 rounded uppercase">BOUNTY</span>
+<span class="font-label-sm text-label-sm text-on-surface tracking-wider">+420 DETECTIVE XP</span>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
+<span>COMBO</span>
+<span class="text-primary font-bold">x3 STREAK 🔥</span>
+</div>
+</div>
+</section>
+<!-- Action & Quick Filter Bar -->
+<section class="flex items-center justify-between gap-space-xs">
+<div class="flex items-center gap-space-xs">
+<button class="px-space-sm py-1.5 bg-surface-container text-on-surface rounded font-label-sm text-label-sm uppercase hover:bg-surface-container-high transition-colors flex items-center gap-1 shadow-xs" id="btn-select-all" onclick="selectAll(true)">
+<span class="material-symbols-outlined text-[16px]">select_all</span>
+<span>SELECT ALL (28)</span>
+</button>
+<button class="px-space-sm py-1.5 bg-surface-container-low text-on-surface-variant rounded font-label-sm text-label-sm uppercase hover:bg-surface-container transition-colors" onclick="selectAll(false)">
+          CLEAR
+        </button>
+</div>
+<button class="px-space-sm py-1.5 bg-surface-container text-on-surface-variant rounded font-label-sm text-label-sm uppercase flex items-center gap-1 hover:text-on-surface shadow-xs">
+<span class="material-symbols-outlined text-[16px]">sort</span>
+<span>CONFIDENCE ▼</span>
+</button>
+</section>
+<!-- 2-Column Responsive Retro Evidence Grid -->
+<section class="grid grid-cols-2 gap-space-sm pb-16">
+<!-- Card 1 (Checked) -->
+<div class="evidence-card bg-surface-container rounded-xl p-space-xs flex flex-col gap-space-xs relative shadow-sm cursor-pointer select-none transition-transform" onclick="toggleCard(this, 3.2)">
+<div class="relative w-full h-36 rounded-lg overflow-hidden bg-surface-container-highest">
+<img class="w-full h-full object-cover" data-alt="Close up photograph of a handwritten notebook page with algebra notes, ballpoint pen calculations, lined paper texture, high contrast warm daylight studio aesthetic matching DocuSweep UI colors." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDal7XA3H71WTkCobJd6mn-TEoo6xS7c8HuW9xjYS2Xw1ZudtNG23ZIXqnw5Y6s9W8t9mmFG2uT8gQs1ue_daCxfjB5ZZoVnBqlKUyGa7GFDf4ha4HO4jjVjqsJQ6RVx3kLrFl7Hwa_rrerVnbNYDeq-1OH4nFaBHDmt2wOXz7h9Mf_r5OJ4iJlcLiLH3_7eAfyLh4FnbSStboFtDKD3jxdxmVGjNOQGEe7tcEm1-m8wN_E8PxVEaxTKg"/>
+<span class="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-primary text-on-primary font-label-sm text-label-sm uppercase tracking-wider">
+            NOTEBOOK
+          </span>
+<span class="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-surface/90 text-on-surface font-label-sm text-label-sm">
+            99% TEXT
+          </span>
+<!-- Pixel Custom Checkbox -->
+<div class="chk-box absolute top-1.5 right-1.5 w-6 h-6 rounded bg-primary text-on-primary flex items-center justify-center shadow-xs">
+<span class="material-symbols-outlined text-[18px]">check</span>
+</div>
+</div>
+<div class="flex items-center justify-between px-space-xs py-0.5">
+<span class="font-label-sm text-label-sm text-on-surface truncate">IMG_8492.JPG</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">3.2 MB</span>
+</div>
+</div>
+<!-- Card 2 (Checked) -->
+<div class="evidence-card bg-surface-container rounded-xl p-space-xs flex flex-col gap-space-xs relative shadow-sm cursor-pointer select-none transition-transform" onclick="toggleCard(this, 2.8)">
+<div class="relative w-full h-36 rounded-lg overflow-hidden bg-surface-container-highest">
+<img class="w-full h-full object-cover" data-alt="Photograph of a crumpled coffee shop paper receipt sitting on a pink wooden desk, sharp barcode visible, vintage pixel game atmosphere, high clarity document detection." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7kp2wryfq7SWtX7vowW9L1JdCBnDY5ZkWtcBRWpLcPbr64Y5CjeK9iZqUFK31Y_oysEYZdiUbZ5J7JXZTXzQVYXlIKevYms_8wC6bDdB0Wvxgooa3FsGO0IO8zP9F7CllOKxEslcZ9501fSKI_L2Nx6589yLZQCjL_lifxwmQ7RurnBAUyBB0l_VMlBI4cSqcaijvoOFVq3xcp4aQHfKxitWa3q37zDg8nCahsmBMj75Z7ozyYQIXwA"/>
+<span class="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-secondary text-on-secondary font-label-sm text-label-sm uppercase tracking-wider">
+            RECEIPT
+          </span>
+<span class="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-surface/90 text-on-surface font-label-sm text-label-sm">
+            96% TEXT
+          </span>
+<div class="chk-box absolute top-1.5 right-1.5 w-6 h-6 rounded bg-primary text-on-primary flex items-center justify-center shadow-xs">
+<span class="material-symbols-outlined text-[18px]">check</span>
+</div>
+</div>
+<div class="flex items-center justify-between px-space-xs py-0.5">
+<span class="font-label-sm text-label-sm text-on-surface truncate">REC_1024.PNG</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">2.8 MB</span>
+</div>
+</div>
+<!-- Card 3 (Checked) -->
+<div class="evidence-card bg-surface-container rounded-xl p-space-xs flex flex-col gap-space-xs relative shadow-sm cursor-pointer select-none transition-transform" onclick="toggleCard(this, 3.8)">
+<div class="relative w-full h-36 rounded-lg overflow-hidden bg-surface-container-highest">
+<img class="w-full h-full object-cover" data-alt="Office meeting dry-erase whiteboard full of sprint flowchart arrows, sticky notes, and marker diagrams, photographed in a well lit modern retro office studio." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDYUkMbf4hPsKmQLhFNLcFD0TZPxiOrfoUFcKXS2ejcwTZIbXzNXF0q_0pNt5rIVDaZ_JPlfqw_5XKtrb_yrwQrjqjMZlLJ04YJrWmNpUVCBHCUuNLhDDkq8QggC80Yta78MxlwI6SgiNVWA5W35UyYsU4BYTay3HKjfCYyQLhnnrHkCTiNBk3s-D_4hZCug_OUSsBTMr1NBTIt6VExHVjsVjVUJEXPPY-qRzSRp7eo-oahTEnV8Z0ICw"/>
+<span class="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-tertiary text-on-tertiary font-label-sm text-label-sm uppercase tracking-wider">
+            WHITEBOARD
+          </span>
+<span class="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-surface/90 text-on-surface font-label-sm text-label-sm">
+            94% TEXT
+          </span>
+<div class="chk-box absolute top-1.5 right-1.5 w-6 h-6 rounded bg-primary text-on-primary flex items-center justify-center shadow-xs">
+<span class="material-symbols-outlined text-[18px]">check</span>
+</div>
+</div>
+<div class="flex items-center justify-between px-space-xs py-0.5">
+<span class="font-label-sm text-label-sm text-on-surface truncate">BOARD_09.PNG</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">3.8 MB</span>
+</div>
+</div>
+<!-- Card 4 (Checked) -->
+<div class="evidence-card bg-surface-container rounded-xl p-space-xs flex flex-col gap-space-xs relative shadow-sm cursor-pointer select-none transition-transform" onclick="toggleCard(this, 2.6)">
+<div class="relative w-full h-36 rounded-lg overflow-hidden bg-surface-container-highest">
+<img class="w-full h-full object-cover" data-alt="Slide deck presentation displayed on a laptop screen photographed from audience view, bullet points and graphs visible, pastel tones warm illumination." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCe9PwkVFFzZzNGWFfogIMJczMnoaq89tf47vvwGAqrRMHQpXB7IgUFzpVsfPpES-iyBRVA2f9TIsh72IdToMItl8zn0UIS4xKoMn5as-uz1iiYXi1Z9sUv0RagMwI2-3eujs7lSalqCPnvrABmPI6FNKlYRDJCaO7RofYFmnz3RbwIc9JF4BTq0OCenecY3Kt6nrMhoS1BpdulrdrILGS2oueCgrainsZgtW2bXLWvE4wSpkvs5fOfVg"/>
+<span class="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-primary text-on-primary font-label-sm text-label-sm uppercase tracking-wider">
+            SLIDE DECK
+          </span>
+<span class="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-surface/90 text-on-surface font-label-sm text-label-sm">
+            92% TEXT
+          </span>
+<div class="chk-box absolute top-1.5 right-1.5 w-6 h-6 rounded bg-primary text-on-primary flex items-center justify-center shadow-xs">
+<span class="material-symbols-outlined text-[18px]">check</span>
+</div>
+</div>
+<div class="flex items-center justify-between px-space-xs py-0.5">
+<span class="font-label-sm text-label-sm text-on-surface truncate">SLIDE_WK42.JPG</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">2.6 MB</span>
+</div>
+</div>
+<!-- Card 5 (Unchecked) -->
+<div class="evidence-card bg-surface-container rounded-xl p-space-xs flex flex-col gap-space-xs relative shadow-sm cursor-pointer select-none transition-transform opacity-90" onclick="toggleCard(this, 4.1)">
+<div class="relative w-full h-36 rounded-lg overflow-hidden bg-surface-container-highest">
+<img class="w-full h-full object-cover" data-alt="A smartphone screenshot of a chat thread message bubble log with pixelated retro avatar icons, clean pink and cream tone UI elements." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBo-XuozIBfJjJ0iTUvQSExLDaFHVH7-cNvlMD5yn7rqs2oViAheOqOf1fMHlz-pqer7rECOcooJyx0Qmy-FN58cqtf7Ol3hjghIUMbGYjNB-cWZJI8HW8-bQpnTKAKLZUV2_ExuWDguTLHMviCUIrLthb_ipOcXTrK5-MvhBCqijvgnI3b6Jpdh4t3wi4EwLIGCSH5uDxuzDcQshZH-vlfc0s3csRJhWfH2LAwVeUH4oOKuUeAoy9arw"/>
+<span class="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-surface-dim text-on-surface font-label-sm text-label-sm uppercase tracking-wider">
+            CHAT LOG
+          </span>
+<span class="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-surface/90 text-on-surface font-label-sm text-label-sm">
+            88% TEXT
+          </span>
+<div class="chk-box absolute top-1.5 right-1.5 w-6 h-6 rounded bg-surface-container-highest text-transparent flex items-center justify-center shadow-xs">
+<span class="material-symbols-outlined text-[18px]">check</span>
+</div>
+</div>
+<div class="flex items-center justify-between px-space-xs py-0.5">
+<span class="font-label-sm text-label-sm text-on-surface truncate">SCREEN_238.PNG</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">4.1 MB</span>
+</div>
+</div>
+<!-- Card 6 (Unchecked) -->
+<div class="evidence-card bg-surface-container rounded-xl p-space-xs flex flex-col gap-space-xs relative shadow-sm cursor-pointer select-none transition-transform opacity-90" onclick="toggleCard(this, 1.9)">
+<div class="relative w-full h-36 rounded-lg overflow-hidden bg-surface-container-highest">
+<img class="w-full h-full object-cover" data-alt="Handwritten recipe card on textured index paper with culinary notes, olive oil sketches, warm retro kitchen ambience with gentle shadows." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCMhvW7YExTRerxW7NyE_K-x8X-RAorhIifRuwtfza_RDSHvdpA0xWUQZPh8VpSdkBpX-ncHCFScbzhXsW0VoDl2QCjdDG149mzS0EMl1QHKmyaJjEOtoe2pNawFK6jKWWjU7p6Z2rT-0dqAfA8B39D5zBymHC7LGyTrgnBPnfi0RrgUg7vV6TWAeQJtkG-t43c5LuDGltcS1jcqDdqYL10zc-32hbhX3eg04S_J-ISJY1_AvWk_qpx9Q"/>
+<span class="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-surface-dim text-on-surface font-label-sm text-label-sm uppercase tracking-wider">
+            RECIPE
+          </span>
+<span class="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-surface/90 text-on-surface font-label-sm text-label-sm">
+            85% TEXT
+          </span>
+<div class="chk-box absolute top-1.5 right-1.5 w-6 h-6 rounded bg-surface-container-highest text-transparent flex items-center justify-center shadow-xs">
+<span class="material-symbols-outlined text-[18px]">check</span>
+</div>
+</div>
+<div class="flex items-center justify-between px-space-xs py-0.5">
+<span class="font-label-sm text-label-sm text-on-surface truncate">MOM_RECIPE.JPG</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">1.9 MB</span>
+</div>
+</div>
+</section>
+<!-- Floating Arcade Action Bar (Sticky Action Zone) -->
+<div class="fixed bottom-24 inset-x-margin-mobile z-40 max-w-lg mx-auto">
+<div class="bg-surface-container-highest/95 backdrop-blur-md rounded-xl p-space-xs shadow-xl flex items-center justify-between gap-space-sm">
+<div class="flex flex-col pl-space-sm">
+<div class="flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="font-headline-md text-headline-md text-on-surface leading-none" id="selected-count-label">4 SELECTED</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant mt-0.5" id="selected-size-label">12.4 MB RECOVERABLE</span>
+</div>
+<button class="h-12 px-space-lg rounded bg-primary text-on-primary font-label-lg text-label-lg uppercase tracking-wider flex items-center gap-space-xs shadow-md active:scale-95 transition-all" onclick="triggerPurge()">
+<span>PURGE EVIDENCE</span>
+<span class="material-symbols-outlined text-[18px]">delete_sweep</span>
+</button>
+</div>
+</div>
+</div>
+<!-- ========================================== -->
+<!-- STATE B: EMPTY SCAN (0 CLUES DETECTED)     -->
+<!-- ========================================== -->
+<div class="hidden flex-col w-full gap-space-md py-space-md" id="view-empty">
+<!-- Retro Empty State Display Case -->
+<section class="bg-surface-container rounded-xl p-space-lg shadow-sm flex flex-col items-center text-center relative overflow-hidden">
+<!-- Top Arcade Ticker -->
+<div class="w-full flex items-center justify-between pb-space-sm mb-space-sm">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">PATROL REPORT #000</span>
+<span class="font-label-sm text-label-sm bg-surface-container-high px-2 py-0.5 rounded text-on-surface">STATUS: ALL CLEAR</span>
+</div>
+<!-- Mascot Empty State Vignette -->
+<div class="relative my-space-md flex flex-col items-center">
+<!-- Floating Question Mark Cluster -->
+<div class="flex items-center gap-space-md text-secondary animate-pulse mb-space-xs">
+<span class="font-headline-lg text-headline-lg">?</span>
+<span class="font-headline-xl text-headline-xl -mt-2">?</span>
+<span class="font-headline-lg text-headline-lg">?</span>
+</div>
+<div class="w-24 h-24 rounded-full bg-surface-container-highest flex items-center justify-center relative shadow-inner">
+<span class="material-symbols-outlined text-primary text-[52px]">person_search</span>
+<span class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-tertiary shadow-sm">
+<span class="material-symbols-outlined text-[18px]">sentiment_neutral</span>
+</span>
+</div>
+</div>
+<!-- Narrative Copy -->
+<h3 class="font-headline-xl-mobile text-headline-xl-mobile text-on-surface uppercase tracking-tight mt-space-xs">
+        NO CLUES FOUND... YET!
+      </h3>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-xs mt-space-xs">
+        The apprentice detective searched through <strong class="text-on-surface font-bold">2,000 photos</strong> between <span class="underline">Oct 01 – Oct 24</span>, but spotted zero rogue receipts, notebook scraps, or whiteboard snapshots.
+      </p>
+<!-- Retro Stats Box -->
+<div class="w-full grid grid-cols-2 gap-space-xs bg-surface-container-low p-space-sm rounded-lg my-space-md text-left">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">PHOTOS INSPECTED</span>
+<span class="font-headline-md text-headline-md text-on-surface">2,000 / 2,000</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">DETECTED STORAGE</span>
+<span class="font-headline-md text-headline-md text-primary">0.0 MB</span>
+</div>
+</div>
+<!-- Direct CTAs -->
+<div class="w-full flex flex-col gap-space-sm">
+<button class="w-full h-12 bg-primary text-on-primary rounded font-label-lg text-label-lg uppercase tracking-wider flex items-center justify-center gap-space-xs shadow-md active:scale-95 transition-all" onclick="switchState('found')">
+<span class="material-symbols-outlined text-[20px]">calendar_view_week</span>
+<span>WIDEN DATE RANGE</span>
+</button>
+<button class="w-full h-11 bg-surface text-on-surface rounded font-label-md text-label-md uppercase tracking-wider flex items-center justify-center gap-space-xs hover:bg-surface-bright active:scale-95 transition-all shadow-xs" onclick="switchState('found')">
+<span class="material-symbols-outlined text-[18px]">replay</span>
+<span>SCAN DEEP REPOSITORIES</span>
+</button>
+</div>
+<!-- Detective Advice Footer -->
+<div class="mt-space-md pt-space-xs flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px] text-secondary">tips_and_updates</span>
+<span>HINT: SLACK &amp; WHATSAPP SCREENSHOTS OFTEN HIDE IN DOWNLOADS</span>
+</div>
+</section>
+</div>
+<!-- Interactive Logic Hook -->
+<script>
+    let selectedCount = 4;
+    let selectedSize = 12.4;
+
+    function switchState(state) {
+      const foundView = document.getElementById('view-found');
+      const emptyView = document.getElementById('view-empty');
+      const toggleFound = document.getElementById('toggle-found-btn');
+      const toggleEmpty = document.getElementById('toggle-empty-btn');
+
+      if (state === 'found') {
+        foundView.classList.remove('hidden');
+        foundView.classList.add('flex');
+        emptyView.classList.add('hidden');
+        emptyView.classList.remove('flex');
+
+        toggleFound.className = 'px-space-sm py-1 rounded font-label-sm text-label-sm uppercase transition-all bg-primary text-on-primary shadow-sm flex items-center gap-1';
+        toggleEmpty.className = 'px-space-sm py-1 rounded font-label-sm text-label-sm uppercase transition-all text-on-surface-variant hover:text-on-surface flex items-center gap-1';
+      } else {
+        foundView.classList.add('hidden');
+        foundView.classList.remove('flex');
+        emptyView.classList.remove('hidden');
+        emptyView.classList.add('flex');
+
+        toggleEmpty.className = 'px-space-sm py-1 rounded font-label-sm text-label-sm uppercase transition-all bg-primary text-on-primary shadow-sm flex items-center gap-1';
+        toggleFound.className = 'px-space-sm py-1 rounded font-label-sm text-label-sm uppercase transition-all text-on-surface-variant hover:text-on-surface flex items-center gap-1';
+      }
+    }
+
+    function toggleCard(el, size) {
+      const chk = el.querySelector('.chk-box');
+      const isChecked = chk.classList.contains('bg-primary');
+
+      if (isChecked) {
+        chk.classList.remove('bg-primary', 'text-on-primary');
+        chk.classList.add('bg-surface-container-highest', 'text-transparent');
+        el.classList.add('opacity-90');
+        selectedCount--;
+        selectedSize = Math.max(0, parseFloat((selectedSize - size).toFixed(1)));
+      } else {
+        chk.classList.add('bg-primary', 'text-on-primary');
+        chk.classList.remove('bg-surface-container-highest', 'text-transparent');
+        el.classList.remove('opacity-90');
+        selectedCount++;
+        selectedSize = parseFloat((selectedSize + size).toFixed(1));
+      }
+      updateHUD();
+    }
+
+    function selectAll(checkAll) {
+      const cards = document.querySelectorAll('.evidence-card');
+      const sizes = [3.2, 2.8, 3.8, 2.6, 4.1, 1.9];
+      selectedCount = 0;
+      selectedSize = 0;
+
+      cards.forEach((card, idx) => {
+        const chk = card.querySelector('.chk-box');
+        if (checkAll) {
+          chk.classList.add('bg-primary', 'text-on-primary');
+          chk.classList.remove('bg-surface-container-highest', 'text-transparent');
+          card.classList.remove('opacity-90');
+          selectedCount++;
+          selectedSize += sizes[idx] || 2.5;
+        } else {
+          chk.classList.remove('bg-primary', 'text-on-primary');
+          chk.classList.add('bg-surface-container-highest', 'text-transparent');
+          card.classList.add('opacity-90');
+        }
+      });
+      selectedSize = parseFloat(selectedSize.toFixed(1));
+      updateHUD();
+    }
+
+    function updateHUD() {
+      const countEl = document.getElementById('selected-count-label');
+      const sizeEl = document.getElementById('selected-size-label');
+      if (countEl) countEl.innerText = `${selectedCount} SELECTED`;
+      if (sizeEl) sizeEl.innerText = `${selectedSize} MB RECOVERABLE`;
+    }
+
+    function triggerPurge() {
+      if (selectedCount === 0) {
+        alert("Select at least one clue to purge!");
+        return;
+      }
+      switchState('empty');
+    }
+  </script>
+</div></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/90 backdrop-blur-xl shadow-[0_-2px_12px_rgba(0,0,0,0.05)]" data-active-classes="bg-primary-container text-on-primary-container"><div class="flex justify-between items-center h-20 px-margin-mobile gap-space-xs"><a class="flex-1 flex flex-col items-center justify-center h-14 rounded transition-all text-on-surface-variant hover:text-on-surface pixel-pressed" data-path="quest" href="#"><span class="material-symbols-outlined text-[22px]">search_check</span><span class="font-label-sm text-label-sm uppercase mt-0.5">QUEST</span></a><a class="flex-1 flex flex-col items-center justify-center h-14 rounded transition-all text-on-surface-variant hover:text-on-surface pixel-pressed" data-path="hunt" href="#"><span class="material-symbols-outlined text-[22px]">calendar_month</span><span class="font-label-sm text-label-sm uppercase mt-0.5">HUNT</span></a><a aria-current="page" class="relative flex-1 flex flex-col items-center justify-center h-14 rounded transition-all pixel-pressed bg-primary-container text-on-primary-container" data-path="evidence" href="#"><span class="absolute -top-1 right-2 px-1 rounded-full bg-secondary text-on-secondary font-label-sm text-label-sm">NEW</span><span class="material-symbols-outlined text-[22px]">folder</span><span class="font-label-sm text-label-sm uppercase mt-0.5">EVIDENCE</span></a><a class="flex-1 flex flex-col items-center justify-center h-14 rounded transition-all text-on-surface-variant hover:text-on-surface pixel-pressed" data-path="cleanup" href="#"><span class="material-symbols-outlined text-[22px]">delete_sweep</span><span class="font-label-sm text-label-sm uppercase mt-0.5">CLEANUP</span></a></div></nav></body></html>

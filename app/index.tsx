@@ -212,7 +212,6 @@ export default function HomeScreen() {
       ]);
       const allowed =
         permission.granted || permission.accessPrivileges === 'limited';
-
       if (!allowed) {
         if (!permission.canAskAgain) {
           Alert.alert(
@@ -308,7 +307,7 @@ export default function HomeScreen() {
       }
 
       if (cancelScanRef.current) {
-  setScanPhase('ocr');
+        setScanPhase('ocr');
         setHasScanned(true);
         setScanWasCancelled(true);
         return;
@@ -524,49 +523,49 @@ export default function HomeScreen() {
           style={({ pressed }) => [
             styles.matchCard,
             {
-              backgroundColor: isSelected ? colors.secondary : colors.card,
-              borderColor: isSelected ? colors.primary : colors.border,
-              opacity: pressed ? 0.84 : 1,
+              backgroundColor: isSelected ? colors.accent : colors.card,
+              borderColor: colors.foreground,
+              transform: [{ translateX: pressed ? 2 : 0 }, { translateY: pressed ? 2 : 0 }],
             },
           ]}
           testID={`photo-match-${item.id}`}
         >
-          <Image
-            source={{ uri: item.uri }}
-            style={[styles.thumbnail, { backgroundColor: colors.muted }]}
-            resizeMode="cover"
-            accessibilityLabel="Photo preview"
-          />
-          <View style={styles.matchContent}>
-            <Text style={[styles.matchDate, { color: colors.foreground }]}>
-              {formatDate(new Date(item.creationTime))}
-            </Text>
-            <Text style={[styles.matchMeta, { color: colors.mutedForeground }]}>
-              {item.width} × {item.height} · {item.wordCount} detected words
-            </Text>
-            <Text
-              numberOfLines={2}
-              style={[styles.matchSnippet, { color: colors.foreground }]}
+          <View style={styles.thumbnailFrame}>
+            <Image
+              source={{ uri: item.uri }}
+              style={[styles.thumbnail, { backgroundColor: colors.muted }]}
+              resizeMode="cover"
+              accessibilityLabel="Photo preview"
+            />
+            <View style={[styles.evidenceStamp, { backgroundColor: colors.primary }]}>
+              <Text style={[styles.stampText, { color: colors.primaryForeground }]}>OCR CLUE</Text>
+            </View>
+            <View
+              style={[
+                styles.checkCircle,
+                {
+                  backgroundColor: isSelected ? colors.primary : colors.card,
+                  borderColor: colors.foreground,
+                },
+              ]}
             >
-              {item.extractedText || 'Text-like content detected'}
-            </Text>
+              {isSelected ? (
+                <Ionicons name="checkmark" size={17} color={colors.primaryForeground} />
+              ) : null}
+            </View>
           </View>
-          <View
-            style={[
-              styles.checkCircle,
-              {
-                backgroundColor: isSelected ? colors.primary : 'transparent',
-                borderColor: isSelected ? colors.primary : colors.border,
-              },
-            ]}
-          >
-            {isSelected ? (
-              <Ionicons
-                name="checkmark"
-                size={15}
-                color={colors.primaryForeground}
-              />
-            ) : null}
+          <View style={styles.matchFooter}>
+            <View style={styles.matchContent}>
+              <Text numberOfLines={1} style={[styles.matchFilename, { color: colors.foreground }]}>
+                {item.filename.toUpperCase()}
+              </Text>
+              <Text style={[styles.matchMeta, { color: colors.mutedForeground }]}>
+                {formatDate(new Date(item.creationTime))} · {item.wordCount} WORDS
+              </Text>
+              <Text numberOfLines={2} style={[styles.matchSnippet, { color: colors.foreground }]}>
+                {item.extractedText || 'TEXT-LIKE CONTENT DETECTED'}
+              </Text>
+            </View>
           </View>
         </Pressable>
       );
@@ -613,6 +612,8 @@ export default function HomeScreen() {
         data={hasScanned ? matches : []}
         keyExtractor={(item) => item.id}
         renderItem={renderMatch}
+        numColumns={2}
+        columnWrapperStyle={styles.resultsRow}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.listContent,
@@ -643,6 +644,17 @@ export default function HomeScreen() {
                   Your gallery, a little tidier
                 </Text>
               </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Open photo access settings"
+                onPress={openSettings}
+                style={({ pressed }) => [
+                  styles.settingsButton,
+                  { opacity: pressed ? 0.72 : 1 },
+                ]}
+              >
+                <Ionicons name="settings-outline" size={21} color={colors.foreground} />
+              </Pressable>
               <View style={[styles.privateBadge, { backgroundColor: colors.secondary }]}>
                 <Ionicons name="lock-closed-outline" size={12} color={colors.primary} />
                 <Text style={[styles.privateText, { color: colors.primary }]}>
@@ -672,6 +684,10 @@ export default function HomeScreen() {
                 </Text>
               </View>
               <View style={styles.heroArt} pointerEvents="none">
+                <View style={[styles.mascotBadge, { backgroundColor: colors.accent }]}>
+                  <Ionicons name="person" size={29} color={colors.foreground} />
+                  <Ionicons name="search" size={18} color={colors.primary} style={styles.mascotGlass} />
+                </View>
                 <View
                   style={[styles.paperBack, { backgroundColor: colors.accent }]}
                 />
@@ -1030,57 +1046,85 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  listContent: { paddingHorizontal: 20, paddingTop: 6, flexGrow: 1 },
+  listContent: { paddingHorizontal: 16, paddingTop: 8, flexGrow: 1 },
+  resultsRow: { gap: 8, alignItems: 'stretch' },
   topbar: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 18,
-    gap: 11,
+    marginBottom: 12,
+    gap: 8,
   },
   brandMark: {
-    width: 42,
-    height: 42,
-    borderRadius: 15,
+    width: 44,
+    height: 44,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: '#32252A',
     alignItems: 'center',
     justifyContent: 'center',
   },
   brandText: { flex: 1 },
-  brandName: { fontSize: 17, fontWeight: '800', letterSpacing: -0.35 },
-  brandCaption: { fontSize: 11, marginTop: 2 },
+  brandName: { fontFamily: 'monospace', fontSize: 17, fontWeight: '800', letterSpacing: 1 },
+  brandCaption: { fontFamily: 'monospace', fontSize: 9, marginTop: 2, letterSpacing: 1.5 },
+  settingsButton: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F5D9D9',
+    borderWidth: 2,
+    borderColor: '#32252A',
+    shadowColor: '#32252A',
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 2,
+  },
   privateBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     paddingVertical: 7,
     paddingHorizontal: 10,
-    borderRadius: 20,
+    borderRadius: 3,
+    borderWidth: 2,
+    borderColor: '#32252A',
   },
-  privateText: { fontSize: 10, fontWeight: '800' },
+  privateText: { fontFamily: 'monospace', fontSize: 8, fontWeight: '800', letterSpacing: 0.6 },
   hero: {
-    minHeight: 208,
-    padding: 22,
-    borderRadius: 27,
-    marginBottom: 16,
+    minHeight: 190,
+    padding: 17,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#32252A',
+    marginBottom: 12,
     overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
+    shadowColor: '#32252A',
+    shadowOffset: { width: 3, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 3,
   },
   heroCopy: { flex: 1, zIndex: 1, paddingRight: 4 },
   eyebrow: {
+    fontFamily: 'monospace',
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 1.5,
     marginBottom: 10,
   },
   heroTitle: {
-    fontSize: 27,
-    lineHeight: 31,
+    fontFamily: 'monospace',
+    fontSize: 24,
+    lineHeight: 29,
     fontWeight: '800',
-    letterSpacing: -0.75,
+    letterSpacing: 0.2,
   },
   heroBody: {
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 12,
+    lineHeight: 17,
     marginTop: 9,
     maxWidth: 225,
   },
@@ -1092,17 +1136,36 @@ const styles = StyleSheet.create({
     marginLeft: -7,
     transform: [{ rotate: '5deg' }],
   },
+  mascotBadge: {
+    position: 'absolute',
+    top: 5,
+    left: 4,
+    width: 56,
+    height: 56,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#32252A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+    shadowColor: '#32252A',
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 2,
+  },
+  mascotGlass: { position: 'absolute', right: 3, bottom: 3 },
   paperBack: {
     position: 'absolute',
     width: 68,
     height: 88,
-    borderRadius: 10,
+    borderRadius: 3,
     transform: [{ rotate: '-15deg' }, { translateX: 8 }],
   },
   paperFront: {
     width: 66,
     height: 90,
-    borderRadius: 10,
+    borderRadius: 3,
     paddingTop: 27,
     paddingHorizontal: 12,
     gap: 8,
@@ -1114,7 +1177,7 @@ const styles = StyleSheet.create({
     right: 0,
     width: 18,
     height: 18,
-    borderBottomLeftRadius: 7,
+    borderBottomLeftRadius: 3,
   },
   paperLineWide: { width: 39, height: 4, borderRadius: 4 },
   paperLine: { width: 35, height: 3, borderRadius: 4 },
@@ -1125,16 +1188,21 @@ const styles = StyleSheet.create({
     bottom: 2,
     width: 43,
     height: 43,
-    borderRadius: 15,
+    borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
   },
   dateCard: {
-    borderRadius: 23,
-    borderWidth: 1,
-    padding: 17,
-    marginBottom: 15,
+    borderRadius: 5,
+    borderWidth: 2,
+    padding: 14,
+    marginBottom: 13,
+    shadowColor: '#32252A',
+    shadowOffset: { width: 3, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 3,
   },
   sectionHeading: {
     flexDirection: 'row',
@@ -1143,18 +1211,21 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionHeadingText: { flex: 1 },
-  cardTitle: { fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
+  cardTitle: { fontFamily: 'monospace', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 },
   cardSubtitle: { fontSize: 11, marginTop: 4 },
   calendarBadge: {
     width: 38,
     height: 38,
-    borderRadius: 13,
+    borderRadius: 3,
+    borderWidth: 2,
+    borderColor: '#32252A',
     alignItems: 'center',
     justifyContent: 'center',
   },
   dateRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 7 },
   dateField: { flex: 1 },
   fieldLabel: {
+    fontFamily: 'monospace',
     fontSize: 9,
     letterSpacing: 1,
     fontWeight: '800',
@@ -1162,28 +1233,35 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   dateButton: {
-    minHeight: 45,
-    borderWidth: 1,
-    borderRadius: 12,
+    minHeight: 50,
+    borderWidth: 2,
+    borderRadius: 3,
     paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 4,
   },
-  dateValue: { fontSize: 11, fontWeight: '700', flexShrink: 1 },
+  dateValue: { fontFamily: 'monospace', fontSize: 11, fontWeight: '700', flexShrink: 1 },
   dateArrow: { width: 18, height: 45, alignItems: 'center', justifyContent: 'center' },
   scanButton: {
-    minHeight: 52,
-    marginTop: 17,
+    minHeight: 54,
+    marginTop: 15,
     paddingHorizontal: 16,
-    borderRadius: 15,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: '#32252A',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
+    shadowColor: '#32252A',
+    shadowOffset: { width: 3, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 3,
   },
-  scanButtonText: { fontSize: 14, fontWeight: '800', flex: 1, textAlign: 'center' },
+  scanButtonText: { fontFamily: 'monospace', fontSize: 13, fontWeight: '800', flex: 1, textAlign: 'center', letterSpacing: 0.5 },
   progressArea: { marginTop: 14 },
   progressHeading: {
     flexDirection: 'row',
@@ -1193,11 +1271,13 @@ const styles = StyleSheet.create({
   },
   progressText: { fontSize: 10, flex: 1 },
   cancelText: { fontSize: 11, fontWeight: '800', paddingVertical: 2 },
-  progressTrack: { height: 5, borderRadius: 5, overflow: 'hidden', marginTop: 9 },
-  progressFill: { height: 5, borderRadius: 5 },
+  progressTrack: { height: 18, borderRadius: 2, overflow: 'hidden', marginTop: 9, borderWidth: 2, borderColor: '#32252A', padding: 2 },
+  progressFill: { height: 10, borderRadius: 1 },
   notice: {
     marginTop: 13,
-    borderRadius: 12,
+    borderRadius: 3,
+    borderWidth: 2,
+    borderColor: '#32252A',
     padding: 10,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1205,8 +1285,10 @@ const styles = StyleSheet.create({
   },
   noticeText: { flex: 1, fontSize: 10, lineHeight: 15 },
   privacyCard: {
-    borderRadius: 17,
-    padding: 15,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: '#32252A',
+    padding: 13,
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 11,
@@ -1226,29 +1308,69 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 3,
-    marginBottom: 12,
+    marginTop: 5,
+    marginBottom: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderWidth: 2,
+    borderColor: '#32252A',
+    backgroundColor: '#F5D9D9',
   },
   resultsTitleWrap: { flex: 1 },
-  selectAll: { fontSize: 11, fontWeight: '800', paddingVertical: 8, paddingLeft: 10 },
+  selectAll: { fontFamily: 'monospace', fontSize: 9, fontWeight: '800', paddingVertical: 8, paddingLeft: 10 },
   matchCard: {
-    minHeight: 96,
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 9,
+    flex: 1,
+    minWidth: 0,
+    borderWidth: 2,
+    borderRadius: 6,
+    padding: 6,
     marginBottom: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+    marginHorizontal: 4,
+    shadowColor: '#32252A',
+    shadowOffset: { width: 3, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 3,
+  },
+  thumbnailFrame: {
+    height: 132,
+    borderRadius: 3,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#32252A',
+    position: 'relative',
+  },
+  evidenceStamp: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 2,
+  },
+  stampText: {
+    fontFamily: 'monospace',
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  matchFooter: { paddingTop: 7, paddingHorizontal: 2 },
+  matchFilename: {
+    fontFamily: 'monospace',
+    fontSize: 9,
+    fontWeight: '800',
   },
   thumbnail: {
-    width: 65,
-    height: 76,
-    borderRadius: 10,
+    width: '100%',
+    height: '100%',
   },
-  matchContent: { flex: 1, justifyContent: 'center' },
-  matchDate: { fontSize: 12, fontWeight: '800' },
-  matchMeta: { fontSize: 9, marginTop: 4 },
+  matchContent: { minWidth: 0 },
+  matchMeta: {
+    fontFamily: 'monospace',
+    fontSize: 8,
+    marginTop: 4,
+    letterSpacing: 0.2,
+  },
   matchSnippet: { fontSize: 10, lineHeight: 14, marginTop: 5 },
   checkCircle: {
     width: 23,
@@ -1260,11 +1382,16 @@ const styles = StyleSheet.create({
     marginRight: 2,
   },
   emptyCard: {
-    borderWidth: 1,
-    borderRadius: 18,
+    borderWidth: 2,
+    borderRadius: 5,
     padding: 22,
     alignItems: 'center',
     marginTop: 2,
+    shadowColor: '#32252A',
+    shadowOffset: { width: 3, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 3,
   },
   emptyIcon: {
     width: 48,
@@ -1277,9 +1404,9 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 14, fontWeight: '800', textAlign: 'center' },
   emptyText: { fontSize: 11, lineHeight: 17, textAlign: 'center', marginTop: 6 },
   bottomBar: {
-    borderTopWidth: 1,
+    borderTopWidth: 2,
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1297,13 +1424,20 @@ const styles = StyleSheet.create({
   selectionNumber: { fontSize: 10, fontWeight: '900' },
   selectedLabel: { fontSize: 12, fontWeight: '700' },
   deleteButton: {
-    minHeight: 43,
-    borderRadius: 13,
+    minHeight: 46,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#32252A',
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
+    shadowColor: '#32252A',
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 2,
   },
-  deleteButtonText: { fontSize: 11, fontWeight: '800' },
+  deleteButtonText: { fontFamily: 'monospace', fontSize: 10, fontWeight: '800', letterSpacing: 0.4 },
 });

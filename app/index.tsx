@@ -499,7 +499,7 @@ export default function HomeScreen() {
         );
       }
     })();
-  }, [selectedIds]);
+  }, [matches, selectedIds]);
 
   const renderMatch = useCallback(
     ({ item }: { item: Match }) => {
@@ -598,15 +598,12 @@ export default function HomeScreen() {
       allSelected={allSelected}
       startDate={startDate}
       endDate={endDate}
-      dateTarget={dateTarget}
       isScanning={isScanning}
       hasScanned={hasScanned}
       permissionLimited={permissionLimited}
       progress={progress}
       scanPhase={scanPhase}
       scanWasCancelled={scanWasCancelled}
-      onChooseDate={chooseDate}
-      onSetDateTarget={setDateTarget}
       onSetDateRange={(nextStart, nextEnd) => {
         setStartDate(nextStart);
         setEndDate(nextEnd);

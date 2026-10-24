@@ -19,36 +19,36 @@ const colors = {
     tint: '#D94242',
 
     // Core surfaces
-    background: '#F7E8D4',
-    foreground: '#32252A',
+    background: '#FFF8F8',
+    foreground: '#24181D',
 
     // Cards / elevated surfaces
-    card: '#FFF8F8',
-    cardForeground: '#32252A',
+    card: '#FFFFFF',
+    cardForeground: '#24181D',
 
     // Primary action color (buttons, links, active states)
-    primary: '#D94242',
-    primaryForeground: '#F7E8D4',
+    primary: '#B02429',
+    primaryForeground: '#FFFFFF',
 
     // Secondary / less-emphasis interactive surfaces
-    secondary: '#F5D9D9',
-    secondaryForeground: '#32252A',
+    secondary: '#F9E3E9',
+    secondaryForeground: '#24181D',
 
     // Muted / subdued elements (dividers, timestamps, placeholders)
-    muted: '#F2C6B8',
-    mutedForeground: '#71565A',
+    muted: '#FFE8EF',
+    mutedForeground: '#5A403F',
 
     // Accent highlights (badges, selected items, focus rings)
-    accent: '#F06478',
-    accentForeground: '#32252A',
+    accent: '#FE6F83',
+    accentForeground: '#24181D',
 
     // Destructive actions (delete, error states)
-    destructive: '#D94242',
-    destructiveForeground: '#F7E8D4',
+    destructive: '#B02429',
+    destructiveForeground: '#FFFFFF',
 
     // Borders and input outlines
-    border: '#32252A',
-    input: '#32252A',
+    border: '#24181D',
+    input: '#24181D',
   },
 
   // Border radius (in px). Sync from the sibling web artifact's --radius

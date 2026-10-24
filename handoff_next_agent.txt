@@ -1,0 +1,130 @@
+DocuSweep Next-Agent Handoff
+============================
+
+Date: 2026-10-24
+Project: /workspaces/Docsweep
+Platform: React Native + Expo SDK 57, Android, EAS preview APK
+
+Current objective
+-----------------
+Continue refining the DocuSweep retro arcade UI based on the design files in:
+
+  stitch_docusweep_arcade_ui_design/
+
+The supplied designs describe several real UI states:
+- docusweep_home_quest: mission/quest landing state
+- docusweep_choose_your_hunt: date-range selection state
+- docusweep_detective_scanning: active scan state
+- docusweep_evidence_found: results/evidence review state
+- docusweep_cleanup_final_boss: deletion confirmation state
+- docusweep_retro_arcade_clean/DESIGN.md: shared colors, typography, hard shadows, borders, spacing, and component language
+
+What is implemented
+-------------------
+1. app/index.tsx remains the owner of all functional state and behavior:
+   - MediaLibrary photo permissions and limited-access handling
+   - Paginated gallery retrieval
+   - Inclusive start/end date filtering
+   - EXIF-aware fallback date resolution with safe metadata failures
+   - OCR using @react-native-ml-kit/text-recognition
+   - Face filtering using @react-native-ml-kit/face-detection
+   - Existing OCR thresholds are preserved:
+       wordCount >= 8
+       lineCount >= 3
+       wordCount >= 4 && asset.width > asset.height * 0.8
+   - Scan cancellation and progress state
+   - Result selection/deselection
+   - Confirmed Android photo deletion flow
+
+2. components/ArcadeMissionShell.tsx is now the active rendered UI.
+   HomeScreen returns this shell with real state and callbacks.
+
+3. Active shell states:
+   - Hunt/home state before scanning
+   - Detective scanning state while isScanning is true
+   - Evidence state after hasScanned becomes true
+   - Cleanup final-boss modal when selected results are purged
+
+4. Date chooser currently includes:
+   - Start and end date controls using the existing native DateTimePicker
+   - Real month calendar grid
+   - Weekday labels
+   - Previous/next month navigation
+   - Selected range highlighting
+   - Clickable calendar days
+   - Functional Today, Last 7 Days, and This Month shortcuts
+   - All shortcut changes update the real startDate/endDate state
+
+5. constants/colors.ts was changed to the requested retro palette:
+   - #D94242 tomato red
+   - #F06478 bubblegum pink
+   - #F7E8D4 warm cream
+   - #F2C6B8 peach
+   - #32252A dark ink
+   - #F5D9D9 pale rose
+
+6. package.json already includes:
+   - @react-native-ml-kit/text-recognition ^2.0.0
+   - @react-native-ml-kit/face-detection ^2.0.1
+   - expo ~57.0.7
+   - expo-media-library ~57.0.5
+
+Validation completed
+--------------------
+These commands passed after the latest date chooser work:
+
+  npx tsc --noEmit --pretty false
+  npx expo config --type public
+  git diff --check
+
+Editor diagnostics reported no errors for:
+- app/index.tsx
+- components/ArcadeMissionShell.tsx
+- constants/colors.ts
+
+Important remaining work
+------------------------
+1. Remove the old unreachable JSX and legacy style object from app/index.tsx.
+   HomeScreen currently returns ArcadeMissionShell before the previous FlatList UI.
+   The old code is retained only as a review reference and creates unnecessary dead
+   code. Remove it carefully after confirming the active shell works.
+
+2. Clean unused imports and helpers from app/index.tsx after removing the old UI.
+   Likely candidates include old renderMatch, emptyResults, and old UI-only styles.
+   Preserve all scan handlers and date helpers.
+
+3. Improve visual fidelity after installing a preview APK:
+   - Compare the Hunt screen against choose_your_hunt/code.html.
+   - Compare the scanning screen against detective_scanning/code.html.
+   - Compare evidence cards against evidence_found/code.html.
+   - Compare the cleanup modal against cleanup_final_boss/code.html.
+   - Do not add fake counters such as target photo counts, freed MB, XP, or streaks.
+     Only display values that exist in real app state.
+
+4. Test on a real Android EAS preview build. No EAS build was started by the last agent.
+   Build command, only after reviewing/approving the diff:
+
+  npx eas-cli@latest build --platform android --profile preview
+
+5. Do not commit, push, or start an EAS build without the user's approval.
+
+Known design tradeoffs
+----------------------
+- The reference uses Space Mono and Nunito Sans. The project already loads Inter;
+  the shell uses Android monospace for HUD labels and Inter/default body text instead
+  of adding another font dependency.
+- The reference uses pixel-art detective imagery. The shell uses lightweight Ionicons
+  mascot treatments because no verified local pixel-art asset was available.
+- The design folder contains decorative/fake sample stats. Those were intentionally
+  not copied into production because the app has no real values for them yet.
+- The deletion modal is custom and retro-styled, but the actual Android deletion
+  approval flow and success/failure alerts remain unchanged.
+
+Safety notes
+------------
+- Never delete photos automatically.
+- Do not remove limited photo access handling.
+- Do not change OCR thresholds without a separate request.
+- Do not reintroduce the old EXIF diagnostic alert. getAssetInfoAsync can fail when
+  media-location permission is unavailable; the date resolver must remain best-effort.
+- Inspect git status before editing. Existing unrelated files may be dirty.

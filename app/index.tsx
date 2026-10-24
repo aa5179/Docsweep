@@ -340,6 +340,28 @@ export default function HomeScreen() {
         return;
       }
 
+      let detectFaces:
+        | ((
+            uri: string,
+            options?: {
+              performanceMode?: 'fast' | 'accurate';
+              minFaceSize?: number;
+            },
+          ) => Promise<unknown[]>)
+        | null = null;
+      try {
+        const faceDetection = await import(
+          '@react-native-ml-kit/face-detection'
+        );
+        detectFaces = (uri, options) =>
+          faceDetection.default.detect(uri, options);
+      } catch {
+        Alert.alert(
+          'People filtering unavailable',
+          'Face detection is not available in this build. Text-based scanning will continue without excluding photos containing people.',
+        );
+      }
+
       const result: ScanResult = {
         matches: [],
         checked: 0,
@@ -373,7 +395,22 @@ export default function HomeScreen() {
             lineCount >= 3 ||
             (wordCount >= 4 && asset.width > asset.height * 0.8)
           ) {
-            result.matches.push({ ...asset, extractedText: text, wordCount });
+            let hasFace = false;
+            if (detectFaces) {
+              try {
+                const faces = await detectFaces(asset.uri, {
+                  performanceMode: 'fast',
+                  minFaceSize: 0.08,
+                });
+                hasFace = faces.length > 0;
+              } catch {
+                // Keep the OCR match when face detection cannot process one image.
+              }
+            }
+
+            if (!hasFace) {
+              result.matches.push({ ...asset, extractedText: text, wordCount });
+            }
           }
         } catch {
           // Unsupported image formats and individual OCR failures are skipped.

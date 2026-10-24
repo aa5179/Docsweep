@@ -149,6 +149,7 @@ export default function HomeScreen() {
   const [hasScanned, setHasScanned] = useState(false);
   const [permissionLimited, setPermissionLimited] = useState(false);
   const [progress, setProgress] = useState({ checked: 0, total: 0 });
+  const [scanPhase, setScanPhase] = useState<'retrieving' | 'filtering' | 'ocr'>('retrieving');
   const [scanWasCancelled, setScanWasCancelled] = useState(false);
   const cancelScanRef = useRef(false);
 
@@ -203,6 +204,7 @@ export default function HomeScreen() {
     setMatches([]);
     setSelected({});
     setProgress({ checked: 0, total: 0 });
+    setScanPhase('retrieving');
 
     try {
       const permission = await MediaLibrary.requestPermissionsAsync(false, [
@@ -268,10 +270,12 @@ export default function HomeScreen() {
       };
       const selectedDateAssets: MediaLibrary.Asset[] = [];
       const sampleDates: string[] = [];
+      setScanPhase('filtering');
 
-      for (const asset of assets) {
+      for (let index = 0; index < assets.length; index += 1) {
         if (cancelScanRef.current) break;
 
+        const asset = assets[index];
         const resolvedDate = await resolveAssetDate(asset, from, to);
         if (resolvedDate.source === 'creationTime') dateCounts.creationTime += 1;
         if (resolvedDate.source === 'modificationTime') {
@@ -300,9 +304,11 @@ export default function HomeScreen() {
           dateCounts.matched += 1;
           selectedDateAssets.push(asset);
         }
+        setProgress({ checked: index + 1, total: assets.length });
       }
 
       if (cancelScanRef.current) {
+  setScanPhase('ocr');
         setHasScanned(true);
         setScanWasCancelled(true);
         return;
@@ -402,6 +408,7 @@ export default function HomeScreen() {
       );
     } finally {
       setIsScanning(false);
+      setScanPhase('retrieving');
       setProgress({ checked: 0, total: 0 });
     }
   }, [endDate, openSettings, startDate]);
@@ -818,9 +825,11 @@ export default function HomeScreen() {
                 <View style={styles.progressArea}>
                   <View style={styles.progressHeading}>
                     <Text style={[styles.progressText, { color: colors.mutedForeground }]}>
-                      {progress.total > 0
-                        ? `Checking photo ${Math.min(progress.checked + 1, progress.total)} of ${progress.total}`
-                        : 'Finding photos in this date range…'}
+                      {scanPhase === 'retrieving'
+                        ? 'Finding photos in this date range…'
+                        : scanPhase === 'filtering'
+                          ? `Filtering photo ${Math.min(progress.checked + 1, progress.total)} of ${progress.total}`
+                          : `Checking photo ${Math.min(progress.checked + 1, progress.total)} of ${progress.total}`}
                     </Text>
                     <Pressable
                       accessibilityRole="button"

@@ -473,6 +473,25 @@ export default function HomeScreen() {
     const idsToDelete = [...selectedIds];
     void (async () => {
       try {
+        let permission = await MediaLibrary.getPermissionsAsync(false, ['photo']);
+        let canAccessMedia =
+          permission.granted || permission.accessPrivileges === 'limited';
+        if (!canAccessMedia && permission.canAskAgain) {
+          permission = await MediaLibrary.requestPermissionsAsync(false, ['photo']);
+          canAccessMedia =
+            permission.granted || permission.accessPrivileges === 'limited';
+        }
+        if (!canAccessMedia) {
+          Alert.alert(
+            'Photo access needed',
+            'Allow DocuSweep to access the selected photos before deleting them.',
+            permission.canAskAgain
+              ? [{ text: 'Not now', style: 'cancel' }]
+              : [{ text: 'Open settings', onPress: openSettings }, { text: 'Cancel', style: 'cancel' }],
+          );
+          return;
+        }
+
         const confirmed = await MediaLibrary.deleteAssetsAsync(idsToDelete);
         if (!confirmed) {
           Alert.alert(
@@ -492,14 +511,16 @@ export default function HomeScreen() {
           'Deletion request processed',
           'Android processed the selected photo deletion request.',
         );
-      } catch {
+      } catch (error) {
         Alert.alert(
           'Deletion needs approval',
-          'Android may require you to approve deletion in its system photo flow. Review the system prompt to continue.',
+          error instanceof Error
+            ? error.message
+            : 'Android may require you to approve deletion in its system photo flow. Review the system prompt to continue.',
         );
       }
     })();
-  }, [matches, selectedIds]);
+  }, [openSettings, selectedIds]);
 
   const renderMatch = useCallback(
     ({ item }: { item: Match }) => {

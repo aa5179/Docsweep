@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
+import { ArcadeMissionShell } from '@/components/ArcadeMissionShell';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -470,45 +471,34 @@ export default function HomeScreen() {
   const deleteSelected = useCallback(() => {
     if (selectedIds.length === 0) return;
     const idsToDelete = [...selectedIds];
-    Alert.alert(
-      'Delete selected photos?',
-      `${idsToDelete.length} photo${idsToDelete.length === 1 ? '' : 's'} will be sent to Android's photo deletion flow. The system may ask you to approve the request.`,
-      [
-        { text: 'Keep photos', style: 'cancel' },
-        {
-          text: 'Continue',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const confirmed = await MediaLibrary.deleteAssetsAsync(idsToDelete);
-              if (!confirmed) {
-                Alert.alert(
-                  'Nothing deleted',
-                  'Android did not confirm the deletion request.',
-                );
-                return;
-              }
-              setMatches((current) =>
-                current.filter((item) => !idsToDelete.includes(item.id)),
-              );
-              setSelected({});
-              await Haptics.notificationAsync(
-                Haptics.NotificationFeedbackType.Success,
-              );
-              Alert.alert(
-                'Deletion request processed',
-                'Android processed the selected photo deletion request.',
-              );
-            } catch {
-              Alert.alert(
-                'Deletion needs approval',
-                'Android may require you to approve deletion in its system photo flow. Review the system prompt to continue.',
-              );
-            }
-          },
-        },
-      ],
-    );
+    void (async () => {
+      try {
+        const confirmed = await MediaLibrary.deleteAssetsAsync(idsToDelete);
+        if (!confirmed) {
+          Alert.alert(
+            'Nothing deleted',
+            'Android did not confirm the deletion request.',
+          );
+          return;
+        }
+        setMatches((current) =>
+          current.filter((item) => !idsToDelete.includes(item.id)),
+        );
+        setSelected({});
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success,
+        );
+        Alert.alert(
+          'Deletion request processed',
+          'Android processed the selected photo deletion request.',
+        );
+      } catch {
+        Alert.alert(
+          'Deletion needs approval',
+          'Android may require you to approve deletion in its system photo flow. Review the system prompt to continue.',
+        );
+      }
+    })();
   }, [selectedIds]);
 
   const renderMatch = useCallback(
@@ -597,6 +587,35 @@ export default function HomeScreen() {
           : 'Try a wider date range or check that DocuSweep can see the photos you want to scan.'}
       </Text>
     </View>
+  );
+
+  return (
+    <ArcadeMissionShell
+      colors={colors}
+      matches={matches}
+      selected={selected}
+      selectedIds={selectedIds}
+      allSelected={allSelected}
+      startDate={startDate}
+      endDate={endDate}
+      dateTarget={dateTarget}
+      isScanning={isScanning}
+      hasScanned={hasScanned}
+      permissionLimited={permissionLimited}
+      progress={progress}
+      scanPhase={scanPhase}
+      scanWasCancelled={scanWasCancelled}
+      onChooseDate={chooseDate}
+      onSetDateTarget={setDateTarget}
+      onScan={() => {
+        void scanPhotos();
+      }}
+      onCancel={cancelScan}
+      onToggleSelected={toggleSelected}
+      onToggleAll={toggleAll}
+      onDelete={deleteSelected}
+      onOpenSettings={openSettings}
+    />
   );
 
   return (

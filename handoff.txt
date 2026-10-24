@@ -1,0 +1,271 @@
+# DocuSweep — AI Project Handoff & Bug-Fix Instructions
+
+## 1. Your role
+
+Act as a senior React Native / Expo Android engineer. First inspect the existing repository, understand the current implementation, and then fix the date-filtering bug in DocuSweep. Work directly with the existing codebase rather than proposing disconnected snippets.
+
+**Priority:** Correct photo-date filtering for transferred photos, preserve the existing OCR-based document detection, and prevent permission-related crashes.
+
+Do not blindly rewrite the app or change unrelated features.
+
+---
+
+## 2. Project overview
+
+- **Project:** DocuSweep
+- **Purpose:** Scan a phone's photo gallery, identify photos containing documents or notebook notes using on-device OCR, let the user review matches, and provide a way to delete selected photos.
+- **Platform:** Android
+- **Framework:** React Native with Expo
+- **Expo SDK:** 57
+- **Package:** `com.docusweep.android`
+- **Repository directory:** `/workspaces/Docsweep`
+- **Main screen and scan implementation:** `app/index.tsx`
+- **Media library:** `expo-media-library`, approximately `~57.0.5` according to the project history
+- **OCR:** `@react-native-ml-kit/text-recognition`, using native Google ML Kit
+- **Build system:** Expo EAS
+- **Build profile:** `preview`
+- **Distribution:** Internal APK
+- **Git branch:** `main`
+- **Last verified relevant commit:** `366f8fde8bd6ed9ff1617abf243d58603dbc475a`
+
+The user develops through GitHub Codespaces on a mobile browser. Give clear, copy-paste-ready terminal commands and exact file edits.
+
+## 3. Main bug
+
+The user has approximately **3,907 photos associated with 12 February 2024** in Samsung Gallery. This date is associated with transferring/backing up photos from their old phone to their new phone.
+
+When the user selects 12 February 2024, DocuSweep reports that no photos match the date filter.
+
+When selecting 12–13 February 2024, the diagnostic popup appears and reports that Android returned approximately 24,223 photos, with the reported date range extending from 1 January 1970 to 23 October 2026.
+
+A subsequent timestamp diagnostic showed:
+- Zero photos matching the selected range using `asset.creationTime`.
+- No records among the sample that formatted to 12 February 2024.
+
+This suggests that the date displayed by Samsung Gallery may differ from the `creationTime` value returned by the Expo MediaLibrary API. The exact cause is not yet proven.
+
+**Likely area to investigate:** Original photo capture dates stored in EXIF metadata versus Android MediaStore timestamps and Expo MediaLibrary asset fields. Transferred photos may preserve their original capture dates while their media-library timestamps reflect a different date.
+
+Do not assume that every photo has EXIF metadata, or that every date displayed in Samsung Gallery necessarily comes from the same metadata field.
+
+## 4. Current scan implementation
+
+The scan function in `app/index.tsx` requests photo access and retrieves gallery photos using pagination:
+
+```tsx
+const page = await MediaLibrary.getAssetsAsync({
+  mediaType: 'photo',
+  first: 100,
+  after: cursor,
+  sortBy: [[MediaLibrary.SortBy.creationTime, false]],
+});
+```
+
+It accumulates the pages into `assets`, then computes date boundaries:
+
+```tsx
+const from = getDayStart(startDate).getTime();
+const to = getDayEnd(endDate).getTime();
+```
+
+The current filter is:
+
+```tsx
+const selectedDateAssets = assets.filter(
+  (asset) => asset.creationTime >= from && asset.creationTime <= to
+);
+
+assets = selectedDateAssets;
+```
+
+This compares `asset.creationTime` directly with the selected date range. This is the main logic that needs investigation and correction.
+
+The code also contains diagnostic code that shows the selected date range, total retrieved photos, and earliest/latest creation dates.
+
+A temporary metadata diagnostic was added to inspect sample assets:
+
+```tsx
+const info = await MediaLibrary.getAssetInfoAsync(asset);
+```
+
+It attempts to read:
+- `info.modificationTime`
+- `info.exif.DateTimeOriginal`
+- `info.exif.DateTimeDigitized`
+- `info.exif.DateTime`
+
+That diagnostic caused an Android error indicating that `ACCESS_MEDIA_LOCATION` permission was missing.
+
+The user was instructed to remove the temporary `sampleDates` / `samplesWithDates` / `Photo metadata check` diagnostic block, while retaining:
+
+```tsx
+assets = selectedDateAssets;
+```
+
+The user has not yet confirmed whether that removal has been completed. **Inspect the actual current source before making further edits.**
+
+## 5. Permission configuration
+
+The previously shown `app.json` contains this Android configuration:
+
+```json
+"android": {
+  "package": "com.docusweep.android",
+  "permissions": [
+    "android.permission.READ_EXTERNAL_STORAGE",
+    "android.permission.WRITE_EXTERNAL_STORAGE",
+    "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+    "android.permission.READ_MEDIA_IMAGES"
+  ]
+}
+```
+
+The `expo-media-library` plugin is configured for photo access with `granularPermissions: ["photo"]`.
+
+The user was advised to consider adding `android.permission.ACCESS_MEDIA_LOCATION`, but it is not confirmed that this change was made.
+
+**Do not automatically add or request this permission as the first solution.** Investigate whether the correct date can be obtained using metadata that is already available. If the permission is genuinely necessary, explain the Android permission requirements, implement runtime handling appropriately, and provide a graceful fallback when access is denied.
+
+Do not let metadata lookup failures abort the entire scan.
+
+## 6. Existing OCR functionality to preserve
+
+The app dynamically imports the native ML Kit recognizer when scanning begins:
+
+```tsx
+const textRecognition = await import(
+  '@react-native-ml-kit/text-recognition'
+);
+
+recognizeText = (uri) => textRecognition.default.recognize(uri);
+```
+
+It extracts recognized text and evaluates word and line counts. The current first-pass match criteria are:
+
+```tsx
+if (
+  wordCount >= 8 ||
+  lineCount >= 3 ||
+  (wordCount >= 4 && asset.width > asset.height * 0.8)
+) {
+  // Add to document matches
+}
+```
+
+Preserve this OCR behavior unless a separate issue is discovered. The current evidence points to the date-selection stage, not the OCR thresholds.
+
+Photo deletion must remain a user-reviewed action. Never delete photos automatically during scanning or debugging.
+
+## 7. Required investigation and implementation
+
+Work through these steps in order.
+
+### Step A — Inspect the actual repository
+
+Read:
+- `app/index.tsx`
+- `app.json`
+- `package.json`
+- `eas.json`
+- Any existing helper functions for date formatting, permissions, and asset metadata.
+
+Identify whether the temporary metadata diagnostic remains in the current source. Confirm the actual installed Expo MediaLibrary version and the available metadata fields.
+
+Do not assume the source is identical to earlier snippets in this handoff.
+
+### Step B — Establish which date is appropriate
+
+Determine which date Android and Expo expose for:
+- Asset creation time.
+- Asset modification time.
+- Original capture time, when available.
+- EXIF date fields, when available.
+
+Check the installed SDK's supported API and the Android implementation. Do not invent unsupported MediaLibrary fields or use undocumented behavior without verification.
+
+Explain why the reported 1970 date occurs when a timestamp is zero or invalid, if confirmed by the implementation.
+
+### Step C — Implement robust date filtering
+
+The app should match the dates users reasonably expect when filtering their gallery.
+
+Requirements:
+1. Keep the selected start and end dates inclusive.
+2. Use the appropriate date source based on verified API behavior.
+3. Handle missing, zero, invalid, or malformed timestamps safely.
+4. Support transferred photos whose original capture date differs from their media-library date, where the required metadata is available.
+5. Do not treat an unavailable EXIF date as proof that a photo is irrelevant.
+6. Avoid silently skipping thousands of photos because a preferred date field is missing.
+7. Keep pagination and cancellation behavior intact.
+8. Avoid fetching unnecessary full metadata for every asset if a more efficient approach is available.
+9. Preserve permission-denied handling and limited photo access.
+10. Make the fallback behavior explicit and testable.
+
+If Expo MediaLibrary cannot reliably expose the original capture date for this use case, explain the limitation and recommend a compatible approach. Do not add a native module or dependency without checking compatibility with Expo SDK 57 and the existing native build.
+
+### Step D — Improve diagnostics
+
+Provide useful debugging information that distinguishes:
+- Number of assets returned by Android.
+- Number with valid timestamps.
+- Number matching the selected range.
+- Which date field was used.
+- A small sample of asset dates for verification.
+
+Do not trigger a permission-related crash when diagnostic metadata is unavailable. Remove temporary alerts once the issue is resolved or replace them with a deliberate, user-friendly diagnostic mechanism.
+
+### Step E — Validate before rebuilding
+
+Run the appropriate checks, including:
+
+```bash
+npx tsc --noEmit --pretty false
+```
+
+Inspect the final diff and ensure there are no accidental changes to OCR, deletion behavior, or unrelated UI.
+
+Explain which changes require a new EAS Android build and why.
+
+## 8. Acceptance criteria
+
+The fix is not complete until the following can be verified:
+
+- [ ] The app builds successfully for Android with Expo SDK 57.
+- [ ] The app scans the gallery without crashing when EXIF metadata is unavailable or permission is denied.
+- [ ] Selecting 12 February 2024 can find eligible photos whose relevant date is 12 February 2024, including transferred photos where their original capture date is accessible.
+- [ ] Selecting 12–13 February 2024 includes photos matching either date.
+- [ ] The date range does not accidentally include photos outside the intended days.
+- [ ] Invalid or missing timestamps are handled explicitly.
+- [ ] OCR continues to recognize notebook and document photos using the existing matching logic.
+- [ ] Cancellation, progress reporting, limited photo access, and user-reviewed deletion continue to work.
+- [ ] Diagnostics make it possible to tell whether a failure comes from media retrieval, date selection, permissions, or OCR.
+
+## 9. Git and build workflow
+
+The user uses Codespaces and EAS.
+
+After implementing the fix:
+1. Show the exact files changed.
+2. Explain the date-selection logic in plain English.
+3. Run TypeScript validation.
+4. Ask the user to inspect the diff before committing.
+5. Provide copy-paste commands for committing and pushing.
+6. Only then guide them through an EAS preview APK build.
+7. Confirm the latest build's commit hash and install the APK from that exact build.
+
+The previously verified build with commit `366f8fde8bd6ed9ff1617abf243d58603dbc475a` is:
+
+`https://expo.dev/artifacts/eas/rHA9o1CHxTeXfUqhAG1r_qm6Yky5Lckqx-yGwtChlaM.apk`
+
+Do not assume the currently installed APK is the same build.
+
+## 10. How to communicate with the user
+
+The user is a student working through GitHub Codespaces on a phone. They need:
+- Exact commands.
+- Clearly identified files and code blocks.
+- Minimal ambiguity about where to insert or replace code.
+- One coherent solution rather than repeated speculative edits.
+- Explanations of what a command does and what output to send back if needed.
+
+**Start by inspecting the current repository and proposing a verified fix. Do not ask the user to repeat information already contained in this handoff. Do not claim the bug is fixed until it has been tested.**

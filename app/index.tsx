@@ -54,6 +54,87 @@ const getDayEnd = (date: Date) => {
   return result;
 };
 
+const getValidTimestamp = (value: unknown) => {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+
+  const timestamp = value < 10_000_000_000 ? value * 1000 : value;
+  return Number.isFinite(new Date(timestamp).getTime()) ? timestamp : null;
+};
+
+const parseExifDate = (value: unknown) => {
+  if (typeof value !== 'string') return null;
+
+  const match = /^(\d{4}):(\d{2}):(\d{2})[ :]?(\d{2})?:?(\d{2})?:?(\d{2})?$/.exec(
+    value.trim(),
+  );
+  if (!match) return null;
+
+  const [, year, month, day, hours = '0', minutes = '0', seconds = '0'] = match;
+  const date = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hours),
+    Number(minutes),
+    Number(seconds),
+  );
+  return date.getFullYear() === Number(year) &&
+    date.getMonth() === Number(month) - 1 &&
+    date.getDate() === Number(day)
+    ? date.getTime()
+    : null;
+};
+
+type ResolvedAssetDate = {
+  timestamp: number | null;
+  source: 'exif' | 'creationTime' | 'modificationTime' | 'none';
+};
+
+const getExifCaptureDate = (exif: object | undefined) => {
+  if (!exif) return null;
+  const values = exif as Record<string, unknown>;
+  return (
+    parseExifDate(values.DateTimeOriginal) ??
+    parseExifDate(values.DateTimeDigitized) ??
+    parseExifDate(values.DateTime)
+  );
+};
+
+const resolveAssetDate = async (
+  asset: MediaLibrary.Asset,
+  from: number,
+  to: number,
+): Promise<ResolvedAssetDate> => {
+  const creationTime = getValidTimestamp(asset.creationTime);
+  const modificationTime = getValidTimestamp(asset.modificationTime);
+  const creationMatches =
+    creationTime !== null && creationTime >= from && creationTime <= to;
+
+  if (creationMatches) {
+    return { timestamp: creationTime, source: 'creationTime' };
+  }
+
+  try {
+    const info = await MediaLibrary.getAssetInfoAsync(asset);
+    const exifTime = getExifCaptureDate(info.exif);
+    if (exifTime !== null) {
+      return { timestamp: exifTime, source: 'exif' };
+    }
+  } catch {
+    // EXIF may be unavailable without media-location permission.
+  }
+
+  if (creationTime !== null) {
+    return { timestamp: creationTime, source: 'creationTime' };
+  }
+  if (modificationTime !== null) {
+    return { timestamp: modificationTime, source: 'modificationTime' };
+  }
+  return { timestamp: null, source: 'none' };
+};
+
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -178,62 +259,64 @@ export default function HomeScreen() {
         return;
       }
 
-      const retrievedCount = assets.length;
-      const dateBounds = assets.reduce(
-        (bounds, asset) => ({
-          min: Math.min(bounds.min, asset.creationTime),
-          max: Math.max(bounds.max, asset.creationTime),
-        }),
-        { min: Infinity, max: -Infinity }
-      );
-      const availableDates = retrievedCount
-        ? `Photo dates: ${new Date(dateBounds.min).toLocaleDateString()} to ${new Date(dateBounds.max).toLocaleDateString()}.`
-        : 'No photos were returned.';
+      const dateCounts = {
+        creationTime: 0,
+        modificationTime: 0,
+        exif: 0,
+        unavailable: 0,
+        matched: 0,
+      };
+      const selectedDateAssets: MediaLibrary.Asset[] = [];
+      const sampleDates: string[] = [];
+
+      for (const asset of assets) {
+        if (cancelScanRef.current) break;
+
+        const resolvedDate = await resolveAssetDate(asset, from, to);
+        if (resolvedDate.source === 'creationTime') dateCounts.creationTime += 1;
+        if (resolvedDate.source === 'modificationTime') {
+          dateCounts.modificationTime += 1;
+        }
+        if (resolvedDate.source === 'exif') dateCounts.exif += 1;
+        if (resolvedDate.source === 'none') dateCounts.unavailable += 1;
+
+        if (sampleDates.length < 5) {
+          sampleDates.push(
+            `${asset.filename}: ${
+              resolvedDate.timestamp === null
+                ? 'unavailable'
+                : `${resolvedDate.source} ${new Date(
+                    resolvedDate.timestamp,
+                  ).toLocaleDateString()}`
+            }`,
+          );
+        }
+
+        if (
+          resolvedDate.timestamp !== null &&
+          resolvedDate.timestamp >= from &&
+          resolvedDate.timestamp <= to
+        ) {
+          dateCounts.matched += 1;
+          selectedDateAssets.push(asset);
+        }
+      }
+
+      if (cancelScanRef.current) {
+        setHasScanned(true);
+        setScanWasCancelled(true);
+        return;
+      }
+
       Alert.alert(
         'Date filter diagnostic',
-        `Selected: ${new Date(from).toLocaleDateString()} to ${new Date(to).toLocaleDateString()}. ${retrievedCount} photos retrieved. ${availableDates}`
+        [
+          `Selected: ${new Date(from).toLocaleDateString()} to ${new Date(to).toLocaleDateString()}.`,
+          `${assets.length} photos returned; ${dateCounts.matched} matched.`,
+          `Dates used: ${dateCounts.exif} EXIF, ${dateCounts.creationTime} creation, ${dateCounts.modificationTime} modification, ${dateCounts.unavailable} unavailable.`,
+          sampleDates.length ? `Sample: ${sampleDates.join(' | ')}` : 'No photos returned.',
+        ].join('\n'),
       );
-
-      const selectedDateAssets = assets.filter(
-        (asset) => asset.creationTime >= from && asset.creationTime <= to
-      );
-
-      
-const sampleDates = assets.slice(0, 5);
-
-const samplesWithDates = await Promise.all(
-  sampleDates.map(async (asset) => {
-    const info = await MediaLibrary.getAssetInfoAsync(asset);
-
-    let exifDate = 'Unavailable';
-
-    if (info.exif) {
-      const exif = info.exif as Record<string, unknown>;
-      exifDate = String(
-        exif.DateTimeOriginal ??
-          exif.DateTimeDigitized ??
-          exif.DateTime ??
-          'Unavailable'
-      );
-    }
-
-    return [
-      `File: ${asset.filename}`,
-      `Creation: ${new Date(asset.creationTime).toISOString()}`,
-      `Modification: ${
-        info.modificationTime
-          ? new Date(info.modificationTime).toISOString()
-          : 'Unavailable'
-      }`,
-      `EXIF capture date: ${exifDate}`,
-    ].join('\n');
-  })
-);
-
-Alert.alert(
-  'Photo metadata check',
-  samplesWithDates.join('\n\n') || 'No photos returned.'
-);
       assets = selectedDateAssets;
       // This package uses native Google ML Kit. Its module is loaded only when
       // scanning starts so the screen can still render in a generic preview.

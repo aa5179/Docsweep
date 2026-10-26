@@ -23,6 +23,7 @@ import { useColors } from '@/hooks/useColors';
 import { ArcadeMissionShell } from '@/components/ArcadeMissionShell';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const DELETE_BATCH_SIZE = 500;
 
 type Match = MediaLibrary.Asset & {
   extractedText: string;
@@ -471,6 +472,7 @@ export default function HomeScreen() {
   const deleteSelected = useCallback(() => {
     if (selectedIds.length === 0) return;
     const idsToDelete = [...selectedIds];
+    let deletedCount = 0;
     void (async () => {
       try {
         let permission = await MediaLibrary.getPermissionsAsync(false, ['photo']);
@@ -492,31 +494,48 @@ export default function HomeScreen() {
           return;
         }
 
-        const confirmed = await MediaLibrary.deleteAssetsAsync(idsToDelete);
-        if (!confirmed) {
+        for (let offset = 0; offset < idsToDelete.length; offset += DELETE_BATCH_SIZE) {
+          const batch = idsToDelete.slice(offset, offset + DELETE_BATCH_SIZE);
+          const confirmed = await MediaLibrary.deleteAssetsAsync(batch);
+          if (!confirmed) {
+            break;
+          }
+          deletedCount += batch.length;
+          setMatches((current) =>
+            current.filter((item) => !batch.includes(item.id)),
+          );
+          setSelected((current) => {
+            const next = { ...current };
+            batch.forEach((id) => {
+              delete next[id];
+            });
+            return next;
+          });
+        }
+
+        if (deletedCount === 0) {
           Alert.alert(
             'Nothing deleted',
             'Android did not confirm the deletion request.',
           );
           return;
         }
-        setMatches((current) =>
-          current.filter((item) => !idsToDelete.includes(item.id)),
-        );
-        setSelected({});
+
         await Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Success,
         );
         Alert.alert(
           'Deletion request processed',
-          'Android processed the selected photo deletion request.',
+          `${deletedCount} of ${idsToDelete.length} selected photo${idsToDelete.length === 1 ? '' : 's'} processed in batches of ${DELETE_BATCH_SIZE}.`,
         );
       } catch (error) {
-        Alert.alert(
-          'Deletion needs approval',
+        const message =
           error instanceof Error
             ? error.message
-            : 'Android may require you to approve deletion in its system photo flow. Review the system prompt to continue.',
+            : 'Android may require you to approve deletion in its system photo flow. Review the system prompt to continue.';
+        Alert.alert(
+          'Deletion partially processed',
+          `${message}\n\n${deletedCount} of ${idsToDelete.length} selected photo${idsToDelete.length === 1 ? '' : 's'} processed. The remaining photos are still selected.`,
         );
       }
     })();
